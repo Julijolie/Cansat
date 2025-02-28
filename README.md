@@ -82,10 +82,9 @@ O Cansat deverá conter os seguintes sensores para medição da qualidade do ar 
 | --- | --- | --- |
 | **Sensirion SCD30 / MH-Z19** | Medir concentração de CO2 | Alta precisão, compensação de temperatura e umidade |
 | **Alphasense B4 / MiCS-6814** | Medir NO2, CO, SO2, O3 | Sensores multi-gás para maior abrangência |
-| **PMS5003 / SPS30** | Medir material particulado (PM1.0, PM2.5, PM10) | Baixo consumo, alta precisão, baixo custo |
 | **BME280 / DHT22** | Temperatura, umidade e pressão | Baixa derivação, alta precisão |
-| **VEML6075** | Medir radiação UV | Pequeno, preciso e fácil integração |
-| **TSL2591** | Medir intensidade luminosa | Alta faixa dinâmica, ideal para uso externo |
+
+
 
 ### **2.2 Posicionamento e Navegação**
 
@@ -108,6 +107,5 @@ O Cansat deverá conter os seguintes sensores para medição da qualidade do ar 
 | Componente | Função | Justificativa |
 | --- | --- | --- |
 | **Bateria Li-Po 3.7V 2000mAh** | Alimentação | Energia suficiente para operação |
-| **Painel Solar 5V / 1W** | Recarregamento | Prolonga tempo de operação |
 | **PLA/ABS** | Estrutura | Leve, resistente e fácil de fabricar |
 | **Paraquedas** | Recuperação | Minimiza impacto na aterrissagem |
