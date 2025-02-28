@@ -65,14 +65,13 @@ O Cansat deverá conter os seguintes sensores para medição da qualidade do ar 
 | --- | --- | --- | --- | --- | --- | --- |
 | Test_01 | Medir CO2 em ambiente interno | Sensor de CO2 (SCD30/MH-Z19) | Alta | Leitura entre 400-1000 ppm | Pendente | Eng. de Sensores |
 | Test_02 | Medir NO2, CO, SO2, O3 | Sensor multi-gás (Alphasense/MiCS-6814) | Alta | Resposta para cada gás testado | Pendente | Eng. de Sensores |
-| Test_03 | Medir material particulado | Sensor PM (PMS5003/SPS30) | Alta | Valores dentro do esperado | Pendente | Eng. de Sensores |
-| Test_04 | Medir temperatura e umidade | Sensor (BME280/DHT22) | Média | Precisão dentro da margem de erro | Pendente | Eng. de Sensores |
-| Test_05 | Testar GPS em ambiente aberto | u-blox NEO-M8N | Alta | Precisão < 5 metros | Pendente | Eng. de Navegação |
-| Test_06 | Testar transmissão LoRa | Módulo SX1276 | Alta | Alcance acima de 1 km | Pendente | Eng. de Comunicação |
-| Test_07 | Testar transmissão via NB-IoT | Módulo SIM7000G | Média | Conexão estável e upload de dados | Pendente | Eng. de Comunicação |
-| Test_08 | Testar integração com armazenamento | MicroSD 16GB | Média | Dados gravados corretamente | Pendente | Eng. de Software |
-| Test_09 | Testar estabilidade energética | Bateria Li-Po 3.7V | Alta | Duração conforme especificado | Pendente | Eng. de Energia |
-| Test_10 | Testar sistema de recuperação | Paraquedas | Alta | Descida controlada sem danos | Pendente | Eng. de Estrutura |
+| Test_03 | Medir temperatura e umidade | Sensor (BME280/DHT22) | Média | Precisão dentro da margem de erro | Pendente | Eng. de Sensores |
+| Test_04 | Testar GPS em ambiente aberto | u-blox NEO-M8N | Alta | Precisão < 5 metros | Pendente | Eng. de Navegação |
+| Test_05 | Testar transmissão LoRa | Módulo SX1276 | Alta | Alcance acima de 1 km | Pendente | Eng. de Comunicação |
+| Test_06 | Testar transmissão via NB-IoT | Módulo SIM7000G | Média | Conexão estável e upload de dados | Pendente | Eng. de Comunicação |
+| Test_07 | Testar integração com armazenamento | MicroSD 16GB | Média | Dados gravados corretamente | Pendente | Eng. de Software |
+| Test_08 | Testar estabilidade energética | Bateria Li-Po 3.7V | Alta | Duração conforme especificado | Pendente | Eng. de Energia |
+| Test_09 | Testar sistema de recuperação | Paraquedas | Alta | Descida controlada sem danos | Pendente | Eng. de Estrutura |
 
 ## Especificação técnia
 
