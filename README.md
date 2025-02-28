@@ -109,5 +109,5 @@ O Cansat deverá conter os seguintes sensores para medição da qualidade do ar 
 | --- | --- | --- |
 | **Bateria Li-Po 3.7V 2000mAh** | Alimentação | Energia suficiente para operação |
 | **Painel Solar 5V / 1W** | Recarregamento | Prolonga tempo de operação |
-| **PLA/ABS/Fibra de Carbono** | Estrutura | Leve, resistente e fácil de fabricar |
-| **Paraquedas de poliéster** | Recuperação | Minimiza impacto na aterrissagem |
+| **PLA/ABS** | Estrutura | Leve, resistente e fácil de fabricar |
+| **Paraquedas** | Recuperação | Minimiza impacto na aterrissagem |
