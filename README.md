@@ -1,21 +1,21 @@
-# SentinelAir - Monitoramento Atmosférico Aéreo
+# SentinelX - Monitoramento Atmosférico Aéreo
 
 ## **1. Introdução**
 
-Este documento define os requisitos técnicos para o desenvolvimento de um **Cansat** destinado à medição da qualidade do ar em diferentes pontos da cidade, aliado à presença de áreas verdes. O dispositivo será lançado por um drone e deve ser recuperável.
+Este documento define os requisitos técnicos para o desenvolvimento do **SentinelX**, um dispositivo destinado à medição da qualidade do ar em diferentes pontos da cidade, aliado à presença de áreas verdes. O dispositivo será lançado por um drone e deve ser recuperável.
 
 ## **2. Requisitos Gerais**
 
-- O Cansat deve medir variáveis ambientais relacionadas à qualidade do ar.
+- O SentinelX deve medir variáveis ambientais relacionadas à qualidade do ar.
 - Deve ser lançado por um drone e possuir sistema de recuperação seguro.
 - Os dados coletados devem ser armazenados localmente e transmitidos remotamente em tempo real.
-- O dispositivo deve ter baixo peso e dimensões compatíveis com padrões Cansat.
+- O dispositivo deve ter baixo peso e dimensões compatíveis com padrões de sensores ambientais compactos.
 
 ## **3. Requisitos Técnicos**
 
 ### **3.1 Sensores e Medidas**
 
-O Cansat deverá conter os seguintes sensores para medição da qualidade do ar e condições ambientais:
+O SentinelX deverá conter os seguintes sensores para medição da qualidade do ar e condições ambientais:
 
 - **Gases e Poluentes:**
     - **CO2:** Sensirion SCD30 ou MH-Z19
@@ -23,6 +23,9 @@ O Cansat deverá conter os seguintes sensores para medição da qualidade do ar 
 - **Condições Ambientais:**
     - **Temperatura e Umidade:** DHT11
     - **Pressão Atmosférica:** BMP280 ou BME680
+    - **Umidade relativa:** DHT11
+- **Radiação**
+    - **Radiação UV:** GUVA-S12SD
 
 ### **3.2 Estrutura e Design**
 
@@ -39,8 +42,7 @@ O Cansat deverá conter os seguintes sensores para medição da qualidade do ar 
 ### **3.4 Comunicação e Transmissão de Dados**
 
 - **Armazenamento local:** microSD (mínimo 16GB, FAT32)
-- **Transmissão sem fio:**
-    - **Curta distância:** LoRa SX1276 (até 15 km)
+- **Transmissão sem fio:** Fs1000a / Mx-rm-5v OEM
 
 ### **3.5 Energia e Alimentação**
 
@@ -63,7 +65,7 @@ O Cansat deverá conter os seguintes sensores para medição da qualidade do ar 
 | Test_05 | Testar estabilidade energética | Bateria Li-Po 3.7V | Alta | Duração conforme especificado | Pendente | Eng. de Energia |
 | Test_06 | Testar sistema de recuperação | Paraquedas | Alta | Descida controlada sem danos | Pendente | Eng. de Estrutura |
 
-## Especificação técnia
+## Especificação técnica
 
 ### **2.1 Sensores Ambientais**
 
@@ -71,15 +73,13 @@ O Cansat deverá conter os seguintes sensores para medição da qualidade do ar 
 | --- | --- | --- |
 | **Sensirion SCD30 / MH-Z19** | Medir concentração de CO2 | Alta precisão, compensação de temperatura e umidade |
 | **Alphasense B4 / MiCS-6814** | Medir NO2, CO, SO2, O3 | Sensores multi-gás para maior abrangência |
-| **DTH 11** | Temperatura, umidade e pressão | Baixa derivação, alta precisão |
-
-
+| **DHT11** | Temperatura, umidade e pressão | Baixa derivação, alta precisão |
 
 ### **2.2 Computação e Controle**
 
 | Componente | Função | Justificativa |
 | --- | --- | --- |
-| **ESP32 / STM32** | Microcontrolador | Wi-Fi, Bluetooth, baixo consumo |
+| **ESP32**  | Microcontrolador | Wi-Fi, Bluetooth, baixo consumo |
 | **MicroSD 16GB** | Armazenamento | Registro de dados offline |
 
 ### **2.3 Energia e Estrutura**
