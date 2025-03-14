@@ -2,20 +2,21 @@
 
 ## **1. Introdução**
 
-Este documento define os requisitos técnicos para o desenvolvimento do **SentinelX**, um dispositivo destinado à medição da qualidade do ar em diferentes pontos da cidade, aliado à presença de áreas verdes. O dispositivo será lançado por um drone e deve ser recuperável.
+Este documento define os requisitos técnicos para o desenvolvimento de um **Cansat** destinado à medição da qualidade do ar em diferentes pontos da cidade, aliado à presença de áreas verdes. O dispositivo será lançado por um drone e deve ser recuperável.
 
 ## **2. Requisitos Gerais**
 
-- O SentinelX deve medir variáveis ambientais relacionadas à qualidade do ar.
+- O Cansat deve medir variáveis ambientais relacionadas à qualidade do ar.
 - Deve ser lançado por um drone e possuir sistema de recuperação seguro.
 - Os dados coletados devem ser armazenados localmente e transmitidos remotamente em tempo real.
-- O dispositivo deve ter baixo peso e dimensões compatíveis com padrões de sensores ambientais compactos.
+- O dispositivo deve ter baixo peso e dimensões compatíveis com padrões Cansat.
+- Deve medir a aceleração da gravidade com base no peso do Cansat quando o paraquedas abrir.
 
 ## **3. Requisitos Técnicos**
 
 ### **3.1 Sensores e Medidas**
 
-O SentinelX deverá conter os seguintes sensores para medição da qualidade do ar e condições ambientais:
+O Cansat deverá conter os seguintes sensores para medição da qualidade do ar, condições ambientais e gravidade:
 
 - **Gases e Poluentes:**
     - **CO2:** Sensirion SCD30 ou MH-Z19
@@ -23,7 +24,8 @@ O SentinelX deverá conter os seguintes sensores para medição da qualidade do 
 - **Condições Ambientais:**
     - **Temperatura e Umidade:** DHT11
     - **Pressão Atmosférica:** BMP280 ou BME680
-    - **Umidade relativa:** DHT11
+- **Medição da Gravidade:**
+    - **Extensômetro:** Sensor de deformação resistivo (Strain Gauge) acoplado a um suporte fixo
 - **Radiação**
     - **Radiação UV:** GUVA-S12SD
 
@@ -42,7 +44,8 @@ O SentinelX deverá conter os seguintes sensores para medição da qualidade do 
 ### **3.4 Comunicação e Transmissão de Dados**
 
 - **Armazenamento local:** microSD (mínimo 16GB, FAT32)
-- **Transmissão sem fio:** Fs1000a / Mx-rm-5v OEM
+- **Transmissão sem fio:**
+    - **Curta distância:** LoRa SX1276 (até 15 km)
 
 ### **3.5 Energia e Alimentação**
 
@@ -54,6 +57,24 @@ O SentinelX deverá conter os seguintes sensores para medição da qualidade do 
     - Desenvolvido em C (Arduino IDE)
     - Algoritmos de calibração para ajuste de medições
 
+### **3.7 Cálculo da Gravidade com Extensômetro**
+
+O extensômetro medirá a deformação da estrutura onde está fixado quando o paraquedas abrir. Essa deformação será convertida em força aplicada usando a equação:
+
+F=ΔRR×KF = \frac{\Delta R}{R} \times K
+
+Onde:
+
+- ΔR\Delta R é a variação da resistência do extensômetro;
+- RR é a resistência inicial;
+- KK é o fator de calibração do extensômetro.
+
+A força FF é usada para determinar a aceleração da gravidade gg a partir da relação:
+
+g=Fmg = \frac{F}{m}
+
+Onde mm é a massa do Cansat.
+
 ## Planilha de teste de bancada
 
 | Test ID | Test Description | Component | Priority | Expected Result | Test Status | Assigned To |
@@ -64,6 +85,7 @@ O SentinelX deverá conter os seguintes sensores para medição da qualidade do 
 | Test_04 | Testar integração com armazenamento | MicroSD 16GB | Média | Dados gravados corretamente | Pendente | Eng. de Software |
 | Test_05 | Testar estabilidade energética | Bateria Li-Po 3.7V | Alta | Duração conforme especificado | Pendente | Eng. de Energia |
 | Test_06 | Testar sistema de recuperação | Paraquedas | Alta | Descida controlada sem danos | Pendente | Eng. de Estrutura |
+| Test_07 | Medir deformação e calcular gravidade | Extensômetro | Alta | Valor consistente com aceleração gravitacional | Pendente | Eng. de Sensores |
 
 ## Especificação técnica
 
@@ -73,13 +95,15 @@ O SentinelX deverá conter os seguintes sensores para medição da qualidade do 
 | --- | --- | --- |
 | **Sensirion SCD30 / MH-Z19** | Medir concentração de CO2 | Alta precisão, compensação de temperatura e umidade |
 | **Alphasense B4 / MiCS-6814** | Medir NO2, CO, SO2, O3 | Sensores multi-gás para maior abrangência |
-| **DHT11** | Temperatura, umidade e pressão | Baixa derivação, alta precisão |
+| **DTH 11** | Temperatura, umidade e pressão | Baixa derivação, alta precisão |
+| **Extensômetro (Strain Gauge)** | Medir deformação devido à força gravitacional | Permite estimar a aceleração da gravidade |
+| GUVA-S12SD | Radiação UV | Sensor UV compacto e de baixo custo. |
 
 ### **2.2 Computação e Controle**
 
 | Componente | Função | Justificativa |
 | --- | --- | --- |
-| **ESP32**  | Microcontrolador | Wi-Fi, Bluetooth, baixo consumo |
+| **ESP32 / STM32** | Microcontrolador | Wi-Fi, Bluetooth, baixo consumo |
 | **MicroSD 16GB** | Armazenamento | Registro de dados offline |
 
 ### **2.3 Energia e Estrutura**
