@@ -21,16 +21,12 @@ O Cansat deverá conter os seguintes sensores para medição da qualidade do ar 
     - **CO2:** Sensirion SCD30 ou MH-Z19
     - **NO2, CO, SO2, O3:** Alphasense B4 series ou MiCS-6814
 - **Condições Ambientais:**
-    - **Temperatura e Umidade:** DHT22 ou BME280
+    - **Temperatura e Umidade:** DHT11
     - **Pressão Atmosférica:** BMP280 ou BME680
-- **Posicionamento e Movimento:**
-    - **GPS para localização:** u-blox NEO-M8N
-    - **Acelerômetro e Giroscópio:** MPU6050 ou BNO055
 
 ### **3.2 Estrutura e Design**
 
 - **Material:** Impressão 3D (PLA ou ABS)
-- **Dimensões:** A~~proximadamente 65mm de diâmetro por 125mm de altura~~
 - **Sistema de proteção para aterrissagem:** Paraquedas
 - **Modularidade:** Compartimentos separados para sensores, bateria e eletrônicos
 
@@ -39,15 +35,12 @@ O Cansat deverá conter os seguintes sensores para medição da qualidade do ar 
 - **Lançamento:** Drone
 - **Sistema de recuperação:**
     - Paraquedas com abertura automática
-    - GPS e Beacon RF (LoRa, 915 MHz) para rastreamento
-    - Transmissão d~~e dados em tempo real (LoRaWAN ou NB-IoT)~~
 
 ### **3.4 Comunicação e Transmissão de Dados**
 
 - **Armazenamento local:** microSD (mínimo 16GB, FAT32)
 - **Transmissão sem fio:**
     - **Curta distância:** LoRa SX1276 (até 15 km)
-    - **Longa distância:** NB-IoT (SIM7000G) ou 4G LTE
 
 ### **3.5 Energia e Alimentação**
 
@@ -65,13 +58,10 @@ O Cansat deverá conter os seguintes sensores para medição da qualidade do ar 
 | --- | --- | --- | --- | --- | --- | --- |
 | Test_01 | Medir CO2 em ambiente interno | Sensor de CO2 (SCD30/MH-Z19) | Alta | Leitura entre 400-1000 ppm | Pendente | Eng. de Sensores |
 | Test_02 | Medir NO2, CO, SO2, O3 | Sensor multi-gás (Alphasense/MiCS-6814) | Alta | Resposta para cada gás testado | Pendente | Eng. de Sensores |
-| Test_03 | Medir temperatura e umidade | Sensor (BME280/DHT22) | Média | Precisão dentro da margem de erro | Pendente | Eng. de Sensores |
-| Test_04 | Testar GPS em ambiente aberto | u-blox NEO-M8N | Alta | Precisão < 5 metros | Pendente | Eng. de Navegação |
-| Test_05 | Testar transmissão LoRa | Módulo SX1276 | Alta | Alcance acima de 1 km | Pendente | Eng. de Comunicação |
-| Test_06 | Testar transmissão via NB-IoT | Módulo SIM7000G | Média | Conexão estável e upload de dados | Pendente | Eng. de Comunicação |
-| Test_07 | Testar integração com armazenamento | MicroSD 16GB | Média | Dados gravados corretamente | Pendente | Eng. de Software |
-| Test_08 | Testar estabilidade energética | Bateria Li-Po 3.7V | Alta | Duração conforme especificado | Pendente | Eng. de Energia |
-| Test_09 | Testar sistema de recuperação | Paraquedas | Alta | Descida controlada sem danos | Pendente | Eng. de Estrutura |
+| Test_03 | Medir temperatura e umidade | Sensor (DHT11) | Média | Precisão dentro da margem de erro | Pendente | Eng. de Sensores |
+| Test_04 | Testar integração com armazenamento | MicroSD 16GB | Média | Dados gravados corretamente | Pendente | Eng. de Software |
+| Test_05 | Testar estabilidade energética | Bateria Li-Po 3.7V | Alta | Duração conforme especificado | Pendente | Eng. de Energia |
+| Test_06 | Testar sistema de recuperação | Paraquedas | Alta | Descida controlada sem danos | Pendente | Eng. de Estrutura |
 
 ## Especificação técnia
 
@@ -81,27 +71,18 @@ O Cansat deverá conter os seguintes sensores para medição da qualidade do ar 
 | --- | --- | --- |
 | **Sensirion SCD30 / MH-Z19** | Medir concentração de CO2 | Alta precisão, compensação de temperatura e umidade |
 | **Alphasense B4 / MiCS-6814** | Medir NO2, CO, SO2, O3 | Sensores multi-gás para maior abrangência |
-| **BME280 / DHT22** | Temperatura, umidade e pressão | Baixa derivação, alta precisão |
+| **DTH 11** | Temperatura, umidade e pressão | Baixa derivação, alta precisão |
 
 
 
-### **2.2 Posicionamento e Navegação**
-
-| Componente | Função | Justificativa |
-| --- | --- | --- |
-| **u-blox NEO-M8N** | GPS para localização | Alta precisão e baixo consumo |
-| **MPU6050 / BNO055** | Acelerômetro e giroscópio | Detecção de queda, ajuste de orientação |
-
-### **2.3 Computação e Controle**
+### **2.2 Computação e Controle**
 
 | Componente | Função | Justificativa |
 | --- | --- | --- |
 | **ESP32 / STM32** | Microcontrolador | Wi-Fi, Bluetooth, baixo consumo |
 | **MicroSD 16GB** | Armazenamento | Registro de dados offline |
-| **LoRa SX1276** | Transmissão de dados | Baixo consumo e longo alcance |
-| **NB-IoT SIM7000G** | Conectividade remota | Backup para transmissão |
 
-### **2.4 Energia e Estrutura**
+### **2.3 Energia e Estrutura**
 
 | Componente | Função | Justificativa |
 | --- | --- | --- |
