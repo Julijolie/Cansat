@@ -44,8 +44,7 @@ O Cansat deverá conter os seguintes sensores para medição da qualidade do ar,
 ### **3.4 Comunicação e Transmissão de Dados**
 
 - **Armazenamento local:** microSD (mínimo 16GB, FAT32)
-- **Transmissão sem fio:**
-    - **Curta distância:** LoRa SX1276 (até 15 km)
+- **Transmissão sem fio:** Fs1000a / Mx-rm-5v OEM
 
 ### **3.5 Energia e Alimentação**
 
@@ -97,7 +96,7 @@ Onde mm é a massa do Cansat.
 | **Alphasense B4 / MiCS-6814** | Medir NO2, CO, SO2, O3 | Sensores multi-gás para maior abrangência |
 | **DTH 11** | Temperatura, umidade e pressão | Baixa derivação, alta precisão |
 | **Extensômetro (Strain Gauge)** | Medir deformação devido à força gravitacional | Permite estimar a aceleração da gravidade |
-| GUVA-S12SD | Radiação UV | Sensor UV compacto e de baixo custo. |
+| **GUVA-S12SD** | Radiação UV | Sensor UV compacto e de baixo custo. |
 
 ### **2.2 Computação e Controle**
 
