@@ -13,4 +13,4 @@
 ### Vantangens desse modelo
 - Utilizando esse modelo é possível facilitar o processo de transmitir as informações que chegam na estação de solo direto para outro aparelho, podendo ser um telefone ou outro computador.
 
-- (Diagrama Comunicação)[]
+- [Diagrama Comunicação](http://github.com/Julijolie/Cansat/blob/main/assets/modeloesploramqtt.jpg)
