@@ -44,7 +44,7 @@ O Cansat deverá conter os seguintes sensores para medição da qualidade do ar,
 ### **3.4 Comunicação e Transmissão de Dados**
 
 - **Armazenamento local:** microSD (mínimo 16GB, FAT32)
-- **Transmissão sem fio:** Fs1000a / Mx-rm-5v OEM
+- **Transmissão sem fio:** LoRA
 
 ### **3.5 Energia e Alimentação**
 
@@ -102,7 +102,7 @@ Onde mm é a massa do Cansat.
 
 | Componente | Função | Justificativa |
 | --- | --- | --- |
-| **ESP32 / STM32** | Microcontrolador | Wi-Fi, Bluetooth, baixo consumo |
+| **ESP32** | Microcontrolador | Wi-Fi, Bluetooth, baixo consumo |
 | **MicroSD 16GB** | Armazenamento | Registro de dados offline |
 
 ### **2.3 Energia e Estrutura**
