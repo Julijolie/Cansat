@@ -2,7 +2,7 @@
 
 ## **1. Introdução**
 
-Este documento define os requisitos técnicos para o desenvolvimento de um **Cansat** destinado à medição da qualidade do ar em diferentes pontos da cidade, aliado à presença de áreas verdes. O dispositivo será lançado por um drone e deve ser recuperável.
+Este documento define os requisitos técnicos para o desenvolvimento de um **Cansat** destinado à medição de dados importantes para a possível sobreveivência da raça humana em um planeta distinto. O dispositivo será lançado por um drone e deve ser recuperável.
 
 ## **2. Requisitos Gerais**
 
