@@ -2,26 +2,24 @@
 #include <WiFi.h>
 #include <PubSubClient.h>
 
-#define RXD2 19  // RX do ESP32 (Conecte ao TX do LoRa)
-#define TXD2 18  // TX do ESP32 (Conecte ao RX do LoRa)
+#define RXD2 19  
+#define TXD2 18  
 
-HardwareSerial LoRaSerial(1);  // Criando uma instância da serial 1 para LoRa
+HardwareSerial LoRaSerial(1);  
 
-// Credenciais Wi-Fi
+
 const char* ssid = "Juli";
 const char* password = "bolo1234678";
 
-// Configurações MQTT
-const char* mqttServer = "test.mosquitto.org"; // Servidor MQTT
-const int mqttPort = 1883; // Porta do MQTT
-WiFiClient espClient; // Cliente Wi-Fi
-PubSubClient client(espClient); // Cliente MQTT
+const char* mqttServer = "test.mosquitto.org"; 
+const int mqttPort = 1883; 
+WiFiClient espClient; 
+PubSubClient client(espClient); 
 
 void setup() {
-  Serial.begin(115200); // Inicializa a Serial do ESP32 (Monitor Serial)
-  LoRaSerial.begin(9600, SERIAL_8N1, RXD2, TXD2); // Inicializa a comunicação com LoRa
+  Serial.begin(115200); 
+  LoRaSerial.begin(9600, SERIAL_8N1, RXD2, TXD2); 
 
-  // Conecta ao Wi-Fi
   WiFi.begin(ssid, password);
   Serial.print("Conectando ao Wi-Fi...");
   while (WiFi.status() != WL_CONNECTED) {
@@ -30,7 +28,6 @@ void setup() {
   }
   Serial.println(" Conectado ao Wi-Fi!");
 
-  // Conecta ao servidor MQTT
   client.setServer(mqttServer, mqttPort);
   while (!client.connected()) {
     Serial.print("Conectando ao MQTT...");
@@ -45,13 +42,13 @@ void setup() {
 }
 
 void loop() {
-  // Verifica se há dados no LoRa
-  if (LoRaSerial.available()) {
-    String mensagem = LoRaSerial.readString(); // Lê a mensagem recebida do LoRa
-    Serial.print("Mensagem Recebida do LoRa: ");
-    Serial.println(mensagem); // Exibe a mensagem no Monitor Serial
 
-    // Publica a mensagem no MQTT
+  if (LoRaSerial.available()) {
+    String mensagem = LoRaSerial.readString(); 
+    Serial.print("Mensagem Recebida do LoRa: ");
+    Serial.println(mensagem); 
+
+
     if (client.publish("ibmec/topico/mqtt", mensagem.c_str())) {
       Serial.println("Mensagem enviada ao MQTT!");
     } else {
@@ -59,6 +56,6 @@ void loop() {
     }
   }
 
-  client.loop(); // Mantém a conexão com o MQTT
-  delay(20); // Pequena pausa
+  client.loop(); 
+  delay(20); 
 }
