@@ -7,7 +7,6 @@
 
 HardwareSerial LoRaSerial(1);  
 
-
 const char* ssid = "Juli";
 const char* password = "bolo1234678";
 
@@ -44,13 +43,19 @@ void setup() {
 void loop() {
 
   if (LoRaSerial.available()) {
+    unsigned long tInicio = millis();  // Marca o tempo antes da leitura da mensagem
+
     String mensagem = LoRaSerial.readString(); 
     Serial.print("Mensagem Recebida do LoRa: ");
     Serial.println(mensagem); 
 
-
     if (client.publish("ibmec/topico/mqtt", mensagem.c_str())) {
+      unsigned long tFim = millis();  // Marca o tempo após envio MQTT
+      unsigned long tempoTotal = tFim - tInicio;
+
       Serial.println("Mensagem enviada ao MQTT!");
+      Serial.print("Tempo total (ms) entre recebimento e envio: ");
+      Serial.println(tempoTotal);
     } else {
       Serial.println("Falha ao enviar mensagem ao MQTT.");
     }
