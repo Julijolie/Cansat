@@ -37,14 +37,13 @@ void loop() {
     Serial.print("Falha no envio (sem ACK): ");
   }
 
-  Serial.print(data.msg);
-  Serial.print(" | Total: ");
-  Serial.print(sentMessages);
-  Serial.print(" | Recebidos: ");
-  Serial.print(ackMessages);
-  Serial.print(" | Perda: ");
-  Serial.print(100.0 * (sentMessages - ackMessages) / sentMessages);
-  Serial.println(" %");
+Serial.print(sentMessages);
+Serial.print(",");
+Serial.print(ackMessages);
+Serial.print(",");
+Serial.println(100.0 * (sentMessages - ackMessages) / sentMessages);
+ // opcional, se quiser registrar o texto enviado
 
-  delay(1000);
+
+  delay(100);
 }
