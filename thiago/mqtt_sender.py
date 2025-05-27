@@ -30,13 +30,28 @@ def envia_mqtt_string(linha, client):
     print(f'Enviado para {topico}: {linha}')
     time.sleep(0.05)
 
+def envia_mqtt_string_multibroker(linha, clients):
+    for client, broker_name in clients:
+        topico = TOPIC_BASE + '/raw'
+        client.publish(topico, linha)
+        print(f'Enviado para {broker_name}: {topico}: {linha}')
+        time.sleep(0.01)
+
 def main():
     import csv
     radio_csv = 'dados_radio.csv'
     first_write = True
-    client = mqtt.Client()
-    client.connect(BROKER, PORT, 60)
-    client.loop_start()
+    # Configuração dos dois brokers
+    BROKERS = [
+        ('localhost', 'Local'),
+        ('test.mosquitto.org', 'Nuvem')
+    ]
+    clients = []
+    for broker, broker_name in BROKERS:
+        client = mqtt.Client()
+        client.connect(broker, 1883, 60)
+        client.loop_start()
+        clients.append((client, broker_name))
 
     ser = serial.Serial(SERIAL_PORT, BAUDRATE, timeout=1)
     print(f'Lendo dados do receptor em {SERIAL_PORT}...')
@@ -54,13 +69,14 @@ def main():
                 writer.writerow([t, linha])
                 f.flush()
                 print(f'Recebido serial: {linha}')
-                envia_mqtt_string(linha, client)
+                envia_mqtt_string_multibroker(linha, clients)
     except KeyboardInterrupt:
         print('Encerrando...')
     finally:
         ser.close()
-        client.loop_stop()
-        client.disconnect()
+        for client, _ in clients:
+            client.loop_stop()
+            client.disconnect()
 
 if __name__ == '__main__':
     main()
