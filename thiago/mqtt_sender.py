@@ -4,7 +4,7 @@ import time
 import re
 
 # Configurações do broker MQTT
-BROKER = 'test.mosquitto.org'  # Ou o endereço do seu broker
+BROKER = 'localhost'  # Agora usando broker local
 PORT = 1883
 TOPIC_BASE = 'cansat/estacao/teste1'
 
@@ -31,6 +31,9 @@ def envia_mqtt_string(linha, client):
     time.sleep(0.05)
 
 def main():
+    import csv
+    radio_csv = 'dados_radio.csv'
+    first_write = True
     client = mqtt.Client()
     client.connect(BROKER, PORT, 60)
     client.loop_start()
@@ -38,12 +41,20 @@ def main():
     ser = serial.Serial(SERIAL_PORT, BAUDRATE, timeout=1)
     print(f'Lendo dados do receptor em {SERIAL_PORT}...')
     try:
-        while True:
-            linha = ser.readline().decode(errors='ignore').strip()
-            if not linha:
-                continue
-            print(f'Recebido serial: {linha}')
-            envia_mqtt_string(linha, client)
+        with open(radio_csv, 'a', newline='') as f:
+            writer = csv.writer(f)
+            if first_write:
+                writer.writerow(['timestamp', 'valor'])
+                first_write = False
+            while True:
+                linha = ser.readline().decode(errors='ignore').strip()
+                if not linha:
+                    continue
+                t = time.time()
+                writer.writerow([t, linha])
+                f.flush()
+                print(f'Recebido serial: {linha}')
+                envia_mqtt_string(linha, client)
     except KeyboardInterrupt:
         print('Encerrando...')
     finally:
