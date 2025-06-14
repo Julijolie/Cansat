@@ -1,0 +1,280 @@
+.App {
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  background-color: #f5f5f5;
+  color: #333;
+}
+
+.App-header {
+  background-color: #282c34;
+  padding: 1.5rem;
+  color: white;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+h1 {
+  margin: 0;
+  font-size: 2rem;
+}
+
+.connection-status {
+  margin-top: 0.5rem;
+  font-size: 0.9rem;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.connected {
+  color: #4caf50;
+  font-weight: bold;
+}
+
+.disconnected {
+  color: #f44336;
+  font-weight: bold;
+}
+
+.message-indicator {
+  display: inline-block;
+  color: #4caf50;
+  font-size: 24px;
+  margin-left: 10px;
+  animation: pulse 1s infinite;
+}
+
+@keyframes pulse {
+  0% { opacity: 0.5; }
+  50% { opacity: 1; }
+  100% { opacity: 0.5; }
+}
+
+.dashboard-container {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  padding: 2rem;
+  max-width: 1300px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+.metrics-panel {
+  background-color: white;
+  padding: 1.5rem;
+  border-radius: 8px;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+  margin-bottom: 2rem;
+}
+
+.metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.metric-card {
+  background-color: #f9f9f9;
+  padding: 1rem;
+  border-radius: 6px;
+  border: 1px solid #eee;
+  transition: all 0.3s ease;
+}
+
+.metric-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.metric-card h3 {
+  margin-top: 0;
+  margin-bottom: 1rem;
+  font-size: 1rem;
+  color: #666;
+}
+
+.metric-value {
+  font-size: 1.8rem;
+  font-weight: bold;
+  color: #333;
+}
+
+.charts-container {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.chart-row {
+  display: flex;
+  gap: 1.5rem;
+  flex-wrap: wrap;
+}
+
+.chart-container {
+  flex: 1;
+  min-width: 45%;
+  background-color: white;
+  padding: 1.5rem;
+  border-radius: 8px;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+  height: 300px;
+}
+
+.chart-container h3 {
+  margin-top: 0;
+  margin-bottom: 1rem;
+  text-align: left;
+  color: #555;
+  font-size: 1rem;
+}
+
+.last-update {
+  margin-top: 1rem;
+  font-size: 0.9rem;
+  color: #888;
+  text-align: right;
+}
+
+footer {
+  background-color: #282c34;
+  color: white;
+  padding: 1rem;
+  font-size: 0.85rem;
+}
+
+.test-button {
+  background-color: #4caf50;
+  color: white;
+  border: none;
+  padding: 5px 10px;
+  border-radius: 4px;
+  cursor: pointer;
+  margin-left: 10px;
+  font-size: 0.8rem;
+}
+
+.test-button:hover {
+  background-color: #3c9f40;
+}
+
+.debug-toggle {
+  background-color: #555;
+  color: white;
+  border: none;
+  padding: 5px 10px;
+  border-radius: 4px;
+  cursor: pointer;
+  margin-left: 15px;
+  font-size: 0.8rem;
+}
+
+.debug-toggle:hover {
+  background-color: #444;
+}
+
+.debug-panel {
+  background-color: #282c34;
+  color: white;
+  padding: 1rem;
+  margin: 1rem 2rem;
+  border-radius: 8px;
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.debug-panel h3 {
+  margin-top: 0;
+  color: white;
+  border-bottom: 1px solid #444;
+  padding-bottom: 8px;
+}
+
+.debug-messages ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.debug-messages li {
+  padding: 6px 0;
+  border-bottom: 1px solid #444;
+  display: flex;
+  font-family: monospace;
+  font-size: 0.9rem;
+}
+
+.debug-messages .time {
+  min-width: 100px;
+  color: #888;
+}
+
+.debug-messages .topic {
+  min-width: 200px;
+  margin: 0 15px;
+  color: #61dafb;
+}
+
+.debug-messages .value {
+  color: #4caf50;
+}
+
+.no-messages {
+  color: #888;
+  font-style: italic;
+}
+
+.broker-selector {
+  margin-left: 15px;
+  padding: 4px 8px;
+  border-radius: 4px;
+  border: 1px solid #444;
+  background-color: #333;
+  color: white;
+  cursor: pointer;
+  font-size: 0.8rem;
+}
+
+.broker-selector:focus {
+  outline: none;
+  border-color: #61dafb;
+}
+
+.reconnect-button {
+  margin-left: 10px;
+  padding: 4px 10px;
+  border-radius: 4px;
+  border: 1px solid #444;
+  background-color: #4c7dbb;
+  color: white;
+  cursor: pointer;
+  font-size: 0.8rem;
+}
+
+.reconnect-button:hover {
+  background-color: #3a6ba8;
+}
+
+@media (max-width: 768px) {
+  .chart-row {
+    flex-direction: column;
+  }
+  
+  .chart-container {
+    min-width: 100%;
+  }
+  
+  .metrics-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 480px) {
+  .metrics-grid {
+    grid-template-columns: 1fr;
+  }
+}

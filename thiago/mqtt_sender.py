@@ -4,12 +4,12 @@ import time
 import re
 
 # Configurações do broker MQTT
-BROKER = 'localhost'  # Agora usando broker local
+BROKER = 'broker.hivemq.com'  # Broker público acessível de qualquer lugar
 PORT = 1883
 TOPIC_BASE = 'cansat/estacao/teste1'
 
 # Configuração da porta serial (ajuste conforme necessário)
-SERIAL_PORT = 'COM3'  # Altere para a porta correta do seu receptor
+SERIAL_PORT = 'COM8'  # Altere para a porta correta do seu receptor
 BAUDRATE = 9600
 
 # Regex para extrair os dados do print do receptor
@@ -33,18 +33,40 @@ def envia_mqtt_string(linha, client):
 def envia_mqtt_string_multibroker(linha, clients):
     for client, broker_name in clients:
         topico = TOPIC_BASE + '/raw'
-        client.publish(topico, linha)
-        print(f'Enviado para {broker_name}: {topico}: {linha}')
+        result = client.publish(topico, linha, qos=1)
+        # Verificar se o envio foi bem sucedido
+        if result.rc == mqtt.MQTT_ERR_SUCCESS:
+            print(f'Enviado para {broker_name}: {topico}: {linha}')
+        else:
+            print(f'ERRO ao enviar para {broker_name}: {result.rc}')
+        
+        # Tentar analisar os dados e enviar para tópicos separados
+        match = regex.search(linha)
+        if match:
+            # Se conseguiu extrair todos os dados
+            id_num, temp, press, accel_x, accel_y, accel_z, gyro_x, gyro_y, gyro_z = match.groups()
+            
+            # Publicar em tópicos individuais
+            client.publish(f"{TOPIC_BASE}/temperatura", temp)
+            client.publish(f"{TOPIC_BASE}/pressao", press)
+            client.publish(f"{TOPIC_BASE}/accelX", accel_x)
+            client.publish(f"{TOPIC_BASE}/accelY", accel_y)
+            client.publish(f"{TOPIC_BASE}/accelZ", accel_z)
+            client.publish(f"{TOPIC_BASE}/gyroX", gyro_x)
+            client.publish(f"{TOPIC_BASE}/gyroY", gyro_y)
+            client.publish(f"{TOPIC_BASE}/gyroZ", gyro_z)
+            
+            print(f'Enviados dados separados para {broker_name}')
+        
         time.sleep(0.01)
 
 def main():
     import csv
     radio_csv = 'dados_radio.csv'
-    first_write = True
-    # Configuração dos dois brokers
+    first_write = True    # Configuração dos dois brokers
     BROKERS = [
         ('localhost', 'Local'),
-        ('test.mosquitto.org', 'Nuvem')
+        ('broker.hivemq.com', 'Nuvem')
     ]
     clients = []
     for broker, broker_name in BROKERS:
