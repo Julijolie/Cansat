@@ -18,15 +18,38 @@ mqtt_latencies = []
 radio_latencies = []
 total_latencies = []
 
-# Arquivo CSV para salvar as medições
-OUTPUT_CSV = 'c:/Users/Arthur/Documents/ibmecRio/2025.1/Cansat/thiago/dados_mqtt_dashboard.csv'
+# Arquivo CSV para salvar as medições - usando caminho absoluto
+# Garantir que o caminho é absoluto para evitar problemas de localização do arquivo
+current_dir = os.path.dirname(os.path.abspath(__file__))
+OUTPUT_CSV = os.path.join(current_dir, 'dados_mqtt_dashboard.csv')
 
 # Dicionário para armazenar os últimos valores recebidos
 last_values = {}
 received_count = 0
 
 # Flag para controle do cabeçalho do CSV
-csv_header_written = False
+# Verifica se o arquivo já existe para determinar se o cabeçalho já foi escrito
+csv_header_written = os.path.exists(OUTPUT_CSV) and os.path.getsize(OUTPUT_CSV) > 0
+
+# Criar o arquivo CSV se não existir e escrever o cabeçalho
+def ensure_csv_exists():
+    global csv_header_written
+    try:
+        # Criar diretório se não existir
+        os.makedirs(os.path.dirname(OUTPUT_CSV) if os.path.dirname(OUTPUT_CSV) else '.', exist_ok=True)
+        
+        if not os.path.exists(OUTPUT_CSV) or os.path.getsize(OUTPUT_CSV) == 0:
+            with open(OUTPUT_CSV, 'w', newline='') as f:
+                writer = csv.writer(f)
+                writer.writerow([
+                    'timestamp', 'id', 'radio_latency', 'mqtt_latency', 'total_latency',
+                    'temperatura', 'pressao', 'accelX', 'accelY', 'accelZ',
+                    'gyroX', 'gyroY', 'gyroZ'
+                ])
+                print(f"Arquivo CSV criado: {OUTPUT_CSV}")
+                csv_header_written = True
+    except Exception as e:
+        print(f"Erro ao criar arquivo CSV: {e}")
 
 def on_connect(client, userdata, flags, rc):
     if rc == 0:
@@ -42,39 +65,69 @@ def on_message(client, userdata, msg):
     global last_data_time, mqtt_latencies, radio_latencies, total_latencies, last_values, received_count, csv_header_written
     
     topic = msg.topic
-    payload = msg.payload.decode()
-    
-    # Debug para confirmar recebimento
-    print(f"Mensagem recebida em {topic}: {payload[:50]}...")
-    
-    # Atualizar o dicionário de últimos valores
-    topic_key = topic.replace(f"{MQTT_TOPIC_BASE}/", "")
-    last_values[topic_key] = payload
-    
-    # Se receber o tópico raw, registrar o timestamp para calcular latência de processamento
-    if topic == MQTT_TOPIC_RAW:
-        # Timestamp de recepção no MQTT subscriber
-        mqtt_receive_time = time.time() * 1000  # milissegundos
-        last_data_time = mqtt_receive_time
-        received_count += 1
-        print(f"[{received_count}] Dados brutos recebidos! Timestamp: {last_data_time}")
+    try:
+        payload = msg.payload.decode('utf-8', errors='replace')
         
-        # Analisar dados brutos para extrair informações importantes
-        # Regex para extrair timestamp e latência do rádio da mensagem
-        radio_regex = re.compile(r'ID: (\d+) \| Timestamp: (\d+) \| RadioLatency: (\d+) ms')
-        match = radio_regex.search(payload)
+        # Debug para confirmar recebimento
+        print(f"Mensagem recebida em {topic}: {payload[:50]}...")
+        print(f"Conteúdo completo da mensagem: {payload}")
+    except Exception as e:
+        print(f"Erro ao decodificar mensagem: {e}")
+        payload = msg.payload.decode('utf-8', errors='ignore')
         
-        if match:
-            id_msg, arduino_timestamp, radio_latency = match.groups()
-            arduino_timestamp = int(arduino_timestamp)
-            radio_latency = int(radio_latency)
+        # Atualizar o dicionário de últimos valores
+        topic_key = topic.replace(f"{MQTT_TOPIC_BASE}/", "")
+        last_values[topic_key] = payload
+        
+        # Se receber o tópico raw, processar para extrair latências e salvar no CSV
+        if topic == MQTT_TOPIC_RAW:
+            # Timestamp de recepção no MQTT subscriber
+            mqtt_receive_time = time.time() * 1000  # milissegundos
+            last_data_time = mqtt_receive_time
+            received_count += 1
+            print(f"[{received_count}] Dados brutos recebidos! Timestamp: {last_data_time}")
+            
+            # Analisar dados brutos para extrair informações importantes
+            # Tentar diferentes padrões de regex para maior robustez
+            radio_regex_patterns = [
+                r'ID: (\d+) \| Timestamp: (\d+) \| .*\| RadioLatency: (\d+) ms',
+                r'ID: (\d+) \| Timestamp: (\d+) \| RadioLatency: (\d+) ms',
+                r'RadioLatency: (\d+) ms'
+            ]
+            
+            match = None
+            for pattern in radio_regex_patterns:
+                match = re.search(pattern, payload)
+                if match:
+                    print(f"Padrão de mensagem encontrado: {pattern}")
+                    break
+                    if not match:
+                        print(f"AVISO: Não foi possível extrair latência do rádio da mensagem. Verifique o formato: {payload}")
+            
+            if match:
+                # Extrair os grupos dependendo do padrão encontrado
+                if len(match.groups()) == 3:
+                    id_msg, arduino_timestamp, radio_latency = match.groups()
+                    arduino_timestamp = int(arduino_timestamp)
+                    radio_latency = int(radio_latency)
+            elif len(match.groups()) == 1:
+                # Formato reduzido encontrado, usar valores padrão
+                id_msg = str(received_count)
+                arduino_timestamp = int(time.time() * 1000 - 50)  # Estimar timestamp do Arduino 
+                radio_latency = int(match.group(1))
+                print(f"Usando formato simplificado para RadioLatency: {radio_latency}ms")
+            else:
+                print("Formato de mensagem não reconhecido completamente")
+                id_msg = str(received_count)
+                arduino_timestamp = int(time.time() * 1000 - 50)
+                radio_latency = 10  # Valor padrão conservador
             
             # Calcular latência MQTT (tempo de recepção - timestamp original)
             mqtt_latency = int(mqtt_receive_time - arduino_timestamp)
             
-            # Corrigir latência MQTT se for muito grande (devido a diferenças de relógio)
-            if mqtt_latency > 100000:  # Se for mais de 100 segundos, provavelmente há diferença de relógio
-                print("Aviso: Detectada diferença grande de relógio. Ajustando cálculo de latência.")
+            # Corrigir latência MQTT se for muito grande ou negativa (devido a diferenças de relógio)
+            if mqtt_latency > 100000 or mqtt_latency < 0:
+                print(f"Aviso: Detectada diferença anormal de relógio ({mqtt_latency}ms). Ajustando cálculo de latência.")
                 # Usar um valor mais realista baseado na diferença entre mensagens consecutivas
                 mqtt_latency = 50  # Valor típico
             
@@ -93,26 +146,15 @@ def on_message(client, userdata, msg):
             total_latencies.append(total_latency)
             
             print(f"Latência do rádio: {radio_latency}ms | Latência MQTT: {mqtt_latency}ms | Total: {total_latency}ms")
-            
-            # Salvar imediatamente no CSV após cada mensagem Raw recebida
+              # Salvar imediatamente no CSV após cada mensagem Raw recebida
             try:
-                # Verificar se o diretório existe
-                os.makedirs(os.path.dirname(OUTPUT_CSV) if os.path.dirname(OUTPUT_CSV) else '.', exist_ok=True)
+                # Garantir que o arquivo CSV existe com o cabeçalho adequado
+                if not os.path.exists(OUTPUT_CSV) or os.path.getsize(OUTPUT_CSV) == 0:
+                    ensure_csv_exists()
                 
-                # Determinar modo de abertura
-                mode = 'a' if os.path.exists(OUTPUT_CSV) and csv_header_written else 'w'
-                
-                with open(OUTPUT_CSV, mode, newline='') as f:
+                # Como o CSV já deve existir, sempre anexamos dados
+                with open(OUTPUT_CSV, 'a', newline='') as f:
                     writer = csv.writer(f)
-                    
-                    # Escrever cabeçalho se necessário
-                    if not csv_header_written or mode == 'w':
-                        writer.writerow([
-                            'timestamp', 'id', 'radio_latency', 'mqtt_latency', 'total_latency',
-                            'temperatura', 'pressao', 'accelX', 'accelY', 'accelZ',
-                            'gyroX', 'gyroY', 'gyroZ'
-                        ])
-                        csv_header_written = True
                     
                     # Extrair outros dados de sensores se disponíveis na mensagem
                     temp_match = re.search(r'Temperatura: ([\d\.-]+) C', payload)
@@ -182,6 +224,10 @@ def main():
     client.on_message = on_message
     
     try:
+        # Garantir que o arquivo CSV existe antes de iniciar
+        print(f"Verificando arquivo CSV: {OUTPUT_CSV}")
+        ensure_csv_exists()
+        
         # Conectar ao broker MQTT
         print(f"Conectando ao broker MQTT: {MQTT_BROKER}...")
         client.connect(MQTT_BROKER, MQTT_PORT, 60)
