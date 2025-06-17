@@ -4,11 +4,15 @@ import numpy as np
 import re
 import os
 
-# Regex para extrair dados do CSV (para compatibilidade com formato antigo)
-radio_regex = re.compile(r'ID: (\d+) \| Timestamp: (\d+) \| RadioLatency: (\d+) ms')
+# Regex corrigido para extrair dados do CSV (usando o formato atual do dados_radio.csv)
+radio_regex = re.compile(r'ID: (\d+) \| Timestamp: (\d+) \| Intervalo: \d+ ms \| RadioLatency: (\d+) ms')
 mqtt_regex = re.compile(r'Radio Latency: (\d+)ms, MQTT Latency: (\d+)ms, Total: (\d+)ms')
 
 def extrair_latencias_radio(arquivo_csv):
+    """
+    Extrai as latências do rádio a partir do arquivo CSV.
+    Suporta tanto o formato novo quanto o antigo.
+    """
     # Verificar se o arquivo existe
     if not os.path.exists(arquivo_csv):
         print(f"Arquivo {arquivo_csv} não encontrado")
@@ -22,6 +26,7 @@ def extrair_latencias_radio(arquivo_csv):
     
     # Verificar se o arquivo é no formato novo (dados_mqtt_dashboard.csv)
     if 'radio_latency' in df.columns:
+        print(f"Usando formato novo de dados (coluna radio_latency) do arquivo {arquivo_csv}")
         # Formato novo - valores diretos
         latencias_radio_raw = df['radio_latency'].dropna().astype(int).tolist()
         ids = list(range(len(latencias_radio_raw)))
@@ -37,20 +42,47 @@ def extrair_latencias_radio(arquivo_csv):
             else:
                 latencias_radio.append(val)
     else:
+        print(f"Usando formato antigo de dados (regex na coluna valor) do arquivo {arquivo_csv}")
+        print("Procurando por padrão: 'ID: X | Timestamp: X | ... | RadioLatency: X ms'")
+        
         # Formato antigo - extrair por regex
         for index, row in df.iterrows():
-            match = radio_regex.search(str(row['valor']) if 'valor' in df.columns else '')
+            # Converter para string se necessário e verificar se a coluna 'valor' existe
+            valor = str(row['valor']) if 'valor' in df.columns else ''
+            
+            # Usar regex corrigido para capturar RadioLatency
+            match = radio_regex.search(valor)
             if match:
                 id_num, timestamp, radio_latency = match.groups()
                 radio_latency_val = int(radio_latency)
                 
-                # Corrigir overflow
+                print(f"[DEBUG] Linha {index}: ID={id_num}, RadioLatency={radio_latency} ms")
+                
+                # Corrigir overflow se necessário
                 if radio_latency_val > 4000000000:
                     radio_latency_val = abs(radio_latency_val - (1 << 32))
                 
                 latencias_radio.append(radio_latency_val)
                 ids.append(int(id_num))
+            else:
+                # Se o padrão principal não foi encontrado, tentar uma regex mais genérica
+                generic_regex = re.compile(r'RadioLatency: (\d+) ms')
+                match = generic_regex.search(valor)
+                if match:
+                    radio_latency = match.group(1)
+                    radio_latency_val = int(radio_latency)
+                    
+                    print(f"[DEBUG] Linha {index}: RadioLatency={radio_latency} ms (usando regex genérica)")
+                    
+                    if radio_latency_val > 4000000000:
+                        radio_latency_val = abs(radio_latency_val - (1 << 32))
+                    
+                    latencias_radio.append(radio_latency_val)
+                    ids.append(index)  # Usar o índice como ID já que não temos o ID real
+                else:
+                    print(f"[DEBUG] Nenhum valor de RadioLatency encontrado na linha {index}")
     
+    print(f"Total de {len(latencias_radio)} valores de latência encontrados em {arquivo_csv}")
     return ids, latencias_radio
 
 def extrair_latencias_mqtt(arquivo_csv):
@@ -68,8 +100,7 @@ def extrair_latencias_mqtt(arquivo_csv):
     
     # Verificar se o arquivo é no formato novo (dados_mqtt_dashboard.csv)
     if 'mqtt_latency' in df.columns and 'total_latency' in df.columns:
-        # Para valores MQTT muito grandes (erro de timestamp), vamos calcular 
-        # valores mais realistas baseados no timestamp do arquivo e nos IDs
+        print(f"Usando formato novo de dados MQTT do arquivo {arquivo_csv}")
         
         # Extrair timestamps do sistema
         timestamps_sistema = df['timestamp'].dropna().tolist()
@@ -91,8 +122,8 @@ def extrair_latencias_mqtt(arquivo_csv):
             
             # Se os valores são irrealistas (muito grandes), gerar valores realistas
             if any(l > 1000000 for l in latencias_mqtt_raw):
-                # Gerar latências MQTT realistas (5-20ms é uma faixa típica)
                 print("Valores de latência MQTT irrealistas detectados, gerando valores realistas...")
+                # Gerar latências MQTT realistas (5-20ms é uma faixa típica)
                 latencias_mqtt = [np.random.randint(5, 20) for _ in range(len(latencias_radio))]
             else:
                 # Usar valores reais da coluna
@@ -123,6 +154,7 @@ def extrair_latencias_mqtt(arquivo_csv):
                 latencias_total.append(latencias_radio[i] + latencias_mqtt[i])
     
     else:
+        print(f"Usando formato antigo de dados MQTT do arquivo {arquivo_csv}")
         # Formato antigo - extrair por regex
         for index, row in df.iterrows():
             valor = str(row['valor']) if 'valor' in df.columns else ''
@@ -169,6 +201,11 @@ def plotar_comparacao_latencias():
         ids_radio, latencias_radio = extrair_latencias_radio(arquivo_radio)
         print(f"Dados de rádio (de {arquivo_radio}): {len(latencias_radio)} amostras")
         
+        if not latencias_radio:
+            raise ValueError(f"Nenhum dado de latência do rádio encontrado em {arquivo_radio}")
+            
+        print(f"Valores de latência do rádio: {latencias_radio[:10]}... (primeiros 10)")
+        
         # Filtragem e normalização dos dados de rádio
         latencias_radio_filtradas = []
         for latencia in latencias_radio:
@@ -176,27 +213,46 @@ def plotar_comparacao_latencias():
             if 0 <= latencia <= 1000:  # limite razoável para latência
                 latencias_radio_filtradas.append(latencia)
             else:
+                print(f"Valor de latência fora do limite: {latencia}ms - substituindo por 50ms")
                 # Gerar valor realista baseado em outros valores ou usar valor padrão
                 latencias_radio_filtradas.append(50)  # 50ms é um valor típico
         
         # Se não temos valores válidos após filtragem, gerar alguns dados realistas
-        if not latencias_radio_filtradas or all(l == 50 for l in latencias_radio_filtradas):
-            print("Gerando dados de rádio simulados para comparação...")
-            # Gerar dados realistas para rádio (40-60ms é uma faixa típica)
-            latencias_radio_filtradas = [np.random.randint(40, 60) for _ in range(50)]
+        if not latencias_radio_filtradas or all(l == latencias_radio_filtradas[0] for l in latencias_radio_filtradas):
+            print("Valores de latência constantes ou inválidos detectados.")
+            unique_values = set(latencias_radio_filtradas)
+            print(f"Valores únicos encontrados: {unique_values}")
+            
+            use_real_data = input("Usar esses valores constantes mesmo assim? (s/n): ").lower() == 's'
+            
+            if not use_real_data:
+                print("Gerando dados de rádio simulados para comparação...")
+                # Gerar dados realistas para rádio (40-60ms é uma faixa típica)
+                latencias_radio_filtradas = [np.random.randint(40, 60) for _ in range(50)]
         
         latencias_radio = latencias_radio_filtradas
         
     except Exception as e:
         print(f"Erro ao carregar dados do rádio: {e}")
-        print("Gerando dados de rádio simulados...")
-        # Gerar dados realistas para rádio
-        latencias_radio = [np.random.randint(40, 60) for _ in range(50)]
+        use_simulation = input("Gerar dados de rádio simulados? (s/n): ").lower() == 's'
+        
+        if use_simulation:
+            print("Gerando dados de rádio simulados...")
+            # Gerar dados realistas para rádio
+            latencias_radio = [np.random.randint(40, 60) for _ in range(50)]
+        else:
+            print("Não é possível continuar sem dados válidos")
+            return
     
     # Tentar carregar dados do MQTT do novo formato
     try:
         radio_latencias_mqtt, latencias_mqtt, latencias_total = extrair_latencias_mqtt('dados_mqtt_dashboard.csv')
         print(f"Dados de MQTT (novo formato): {len(latencias_mqtt)} amostras")
+        
+        if not latencias_mqtt:
+            raise ValueError("Nenhum dado de latência MQTT encontrado")
+            
+        print(f"Valores de latência do MQTT: {latencias_mqtt[:10]}... (primeiros 10)")
         
         # Verificar valores extremos de latências e corrigir
         latencias_mqtt_filtradas = []
@@ -205,6 +261,7 @@ def plotar_comparacao_latencias():
             if 0 <= latencia <= 500:  # 500ms como limite superior razoável
                 latencias_mqtt_filtradas.append(latencia)
             else:
+                print(f"Valor de latência MQTT fora do limite: {latencia}ms - substituindo por 15ms")
                 # Usar um valor típico para MQTT
                 latencias_mqtt_filtradas.append(15)  # ~15ms é típico para MQTT local
         
@@ -224,6 +281,9 @@ def plotar_comparacao_latencias():
             radio_latencias_mqtt, latencias_mqtt, latencias_total = extrair_latencias_mqtt('dados_mqtt.csv')
             print(f"Dados de MQTT (formato antigo): {len(latencias_mqtt)} amostras")
             
+            if not latencias_mqtt:
+                raise ValueError("Nenhum dado de latência MQTT encontrado no formato antigo")
+                
             # Verificar valores extremos das latências
             latencias_mqtt_filtradas = []
             for latencia in latencias_mqtt:
@@ -243,12 +303,18 @@ def plotar_comparacao_latencias():
                 
         except Exception as e:
             print(f"Erro ao carregar dados do MQTT do formato antigo: {e}")
-            print("Gerando dados MQTT simulados...")
-            # Se não temos dados reais, gerar dados simulados mais realistas
-            # MQTT local normalmente tem 5-20ms de latência
-            latencias_mqtt = [np.random.randint(5, 20) for _ in range(len(latencias_radio))]
-            # Total = radio + mqtt
-            latencias_total = [r + m for r, m in zip(latencias_radio, latencias_mqtt)]
+            use_simulation = input("Gerar dados MQTT simulados? (s/n): ").lower() == 's'
+            
+            if use_simulation:
+                print("Gerando dados MQTT simulados...")
+                # Se não temos dados reais, gerar dados simulados mais realistas
+                # MQTT local normalmente tem 5-20ms de latência
+                latencias_mqtt = [np.random.randint(5, 20) for _ in range(len(latencias_radio))]
+                # Total = radio + mqtt
+                latencias_total = [r + m for r, m in zip(latencias_radio, latencias_mqtt)]
+            else:
+                print("Não é possível continuar sem dados válidos")
+                return
     
     # Verificação final: garantir que as três listas têm o mesmo tamanho
     min_len = min(len(latencias_radio), len(latencias_mqtt), len(latencias_total))
@@ -307,7 +373,8 @@ def plotar_comparacao_latencias():
             'median': np.median(latencias_total),
             'std': np.std(latencias_total)
         }
-      # Configurações do gráfico
+    
+    # Configurações do gráfico
     plt.title('Comparação de Latências: Rádio vs MQTT')
     plt.xlabel('Número da amostra')
     plt.ylabel('Latência (ms)')
@@ -330,7 +397,8 @@ def plotar_comparacao_latencias():
     if 'total' in stats:
         meios.append('Total (Rádio + MQTT)')
         latencias_medias.append(stats['total']['avg'])
-      # Ajustar escala vertical para valores razoáveis
+    
+    # Ajustar escala vertical para valores razoáveis
     max_latency = max(stats['radio']['avg'] if 'radio' in stats else 0, 
                       stats['mqtt']['avg'] if 'mqtt' in stats else 0,
                       stats['total']['avg'] if 'total' in stats else 0)
