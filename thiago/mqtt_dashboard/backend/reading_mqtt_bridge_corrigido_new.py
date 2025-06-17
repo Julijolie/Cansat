@@ -63,6 +63,7 @@ def on_connect(client, userdata, flags, rc):
 
 def on_message(client, userdata, msg):
     global last_data_time, mqtt_latencies, radio_latencies, total_latencies, last_values, received_count, csv_header_written
+    global time_offset, time_offset_samples, max_samples
     
     topic = msg.topic
     try:
@@ -124,13 +125,34 @@ def on_message(client, userdata, msg):
             radio_latency = 10  # Valor padrão conservador
         
         # Calcular latência MQTT (tempo de recepção - timestamp original)
-        mqtt_latency = int(mqtt_receive_time - arduino_timestamp)
+        # Calcular diferença de tempo para estimar o offset do relógio
+        if time_offset is None:
+            # Se ainda não estabelecemos o offset entre relógios
+            time_offset_samples.append(mqtt_receive_time - arduino_timestamp)
+            
+            # Quando tivermos amostras suficientes, calcular a mediana para um offset mais confiável
+            if len(time_offset_samples) >= max_samples:
+                # Ordenar e pegar a mediana para maior robustez contra outliers
+                sorted_samples = sorted(time_offset_samples)
+                time_offset = sorted_samples[len(sorted_samples) // 2]
+                print(f"Offset de tempo calculado: {time_offset}ms")
         
-        # Corrigir latência MQTT se for muito grande ou negativa (devido a diferenças de relógio)
-        if mqtt_latency > 100000 or mqtt_latency < 0:
-            print(f"Aviso: Detectada diferença anormal de relógio ({mqtt_latency}ms). Ajustando cálculo de latência.")
-            # Usar um valor mais realista baseado na diferença entre mensagens consecutivas
-            mqtt_latency = 50  # Valor típico
+        # Calcular latência MQTT com compensação de offset de relógio
+        if time_offset is not None:
+            # Com offset estabelecido, calcular latência real
+            mqtt_latency = int(mqtt_receive_time - arduino_timestamp - time_offset)
+            
+            # Ainda assim, verificamos por valores implausíveis
+            if mqtt_latency < 0:
+                print(f"Aviso: Latência negativa após correção ({mqtt_latency}ms). Ajustando.")
+                mqtt_latency = 1  # Valor mínimo sensível
+            
+            if mqtt_latency > 5000:  # 5 segundos é muito tempo para MQTT em condições normais
+                print(f"Aviso: Latência MQTT muito alta ({mqtt_latency}ms). Pode haver problemas na rede.")
+        else:
+            # Ainda estamos coletando amostras para offset
+            print(f"Coletando amostra {len(time_offset_samples)}/{max_samples} para calibração")
+            mqtt_latency = 50  # Valor temporário enquanto calibramos
         
         # Calcular latência total
         total_latency = radio_latency + mqtt_latency
@@ -219,6 +241,22 @@ def on_message(client, userdata, msg):
                       f"Mín: {min(total_latencies)}ms, Máx: {max(total_latencies)}ms")
             print(f"Dados salvos em: {os.path.abspath(OUTPUT_CSV)}")
             print("----------------------------")
+    
+    # Adicionar diagnóstico detalhado periodicamente
+    if received_count % 5 == 0:  # A cada 5 mensagens
+        print_diagnostic_info(arduino_timestamp, mqtt_receive_time, radio_latency, mqtt_latency, total_latency)
+
+def print_diagnostic_info(arduino_timestamp, mqtt_receive_time, radio_latency, mqtt_latency, total_latency):
+    """Imprime informações detalhadas de diagnóstico para auxiliar na análise de latência."""
+    print("\n----- DIAGNÓSTICO DE LATÊNCIA -----")
+    print(f"Timestamp Arduino: {arduino_timestamp}")
+    print(f"Timestamp Local: {int(mqtt_receive_time)}")
+    print(f"Diferença Bruta: {int(mqtt_receive_time - arduino_timestamp)}ms")
+    print(f"Offset Calculado: {time_offset}ms" if time_offset is not None else "Offset não calculado ainda")
+    print(f"Latência Rádio: {radio_latency}ms")
+    print(f"Latência MQTT (após ajuste): {mqtt_latency}ms")
+    print(f"Latência Total: {total_latency}ms")
+    print("----------------------------------\n")
 
 def main():
     # Configuração do cliente MQTT
@@ -255,6 +293,11 @@ def main():
     finally:
         # Limpeza ao sair
         print("Finalizando...")
+
+# Adicionar novas variáveis globais no início do arquivo (depois da linha 20)
+time_offset = None  # Diferença entre o relógio do Arduino e do computador
+time_offset_samples = []
+max_samples = 10  # Número de amostras para calcular o offset
 
 if __name__ == "__main__":
     main()

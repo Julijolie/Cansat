@@ -48,10 +48,9 @@ def envia_mqtt_string_multibroker(linha, clients):
         if match:
             # Se conseguiu extrair todos os dados
             id_num, timestamp, radio_latency, temp, press, accel_x, accel_y, accel_z, gyro_x, gyro_y, gyro_z = match.groups()
-            
-            # Calcular a latência MQTT (tempo atual - timestamp de envio original)
+              # Calcular a latência MQTT (tempo atual - timestamp de envio original)
             mqtt_latency = mqtt_receive_time - int(timestamp)
-            total_latency = mqtt_latency  # Latência total = latência do rádio + latência do MQTT
+            total_latency = int(mqtt_latency) + int(radio_latency)  # Latência total = latência do rádio + latência do MQTT
             
             # Publicar em tópicos individuais
             client.publish(f"{TOPIC_BASE}/timestamp", timestamp)
