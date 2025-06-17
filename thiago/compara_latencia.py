@@ -4,8 +4,63 @@ import numpy as np
 import re
 import os
 
-# Regex para extrair dados do CSV (para compatibilidade com formato antigo)
-radio_regex = re.compile(r'ID: (\d+) \| Timestamp: (\d+) \| RadioLatency: (\d+) ms')
+# IMPORTANTE: Este script SEMPRE obtém os dados de latência do rádio do arquivo dados_radio.csv,
+# mesmo quando estiver comparando com dados de MQTT. Isto garante que a fonte de dados
+# de latência do rádio seja consistente em todas as análises.
+
+# Função para limpar caracteres problemáticos em arquivos CSV
+def limpar_arquivo_csv(arquivo_entrada, arquivo_saida=None):
+    """
+    Limpa caracteres não-ASCII de um arquivo CSV para evitar problemas de encoding.
+    Se arquivo_saida for None, sobrescreve o arquivo original.
+    """
+    if arquivo_saida is None:
+        arquivo_saida = arquivo_entrada + '.temp'
+        sobrescrever = True
+    else:
+        sobrescrever = False
+        
+    print(f"Limpando caracteres problemáticos de {arquivo_entrada}...")
+    
+    try:
+        # Tentar diferentes encodings para leitura
+        for encoding in ['utf-8', 'latin1', 'cp1252', 'iso-8859-1']:
+            try:
+                with open(arquivo_entrada, 'r', encoding=encoding, errors='replace') as f:
+                    conteudo = f.read()
+                print(f"Arquivo lido com sucesso usando encoding {encoding}")
+                break
+            except UnicodeDecodeError:
+                print(f"Falha ao ler com encoding {encoding}")
+                if encoding == 'iso-8859-1':  # último da lista
+                    raise Exception("Não foi possível ler o arquivo com nenhum encoding")
+        
+        # Limpar caracteres não-ASCII ou problemáticos
+        conteudo_limpo = ''
+        for char in conteudo:
+            if ord(char) < 128 or char in ',"\n\r':
+                conteudo_limpo += char
+            else:
+                conteudo_limpo += ' '  # Substitui caracteres problemáticos por espaço
+        
+        # Escrever arquivo limpo
+        with open(arquivo_saida, 'w', encoding='utf-8') as f:
+            f.write(conteudo_limpo)
+        
+        if sobrescrever:
+            import os
+            os.replace(arquivo_saida, arquivo_entrada)
+            print(f"Arquivo {arquivo_entrada} foi limpo e sobrescrito")
+        else:
+            print(f"Arquivo limpo salvo como {arquivo_saida}")
+            
+        return True
+    except Exception as e:
+        print(f"Erro ao limpar arquivo: {e}")
+        return False
+
+# Regex para extrair dados do CSV (para compatibilidade com formato atual)
+radio_regex = re.compile(r'ID: (\d+) \| Timestamp: (\d+) \| Intervalo: \d+ ms \| RadioLatency: (\d+) ms')
 mqtt_regex = re.compile(r'Radio Latency: (\d+)ms, MQTT Latency: (\d+)ms, Total: (\d+)ms')
 
 def extrair_latencias_radio(arquivo_csv):
@@ -13,8 +68,22 @@ def extrair_latencias_radio(arquivo_csv):
     if not os.path.exists(arquivo_csv):
         print(f"Arquivo {arquivo_csv} não encontrado")
         return [], []
-        
-    df = pd.read_csv(arquivo_csv)
+    
+    # Lista de encodings para tentar
+    encodings = ['utf-8', 'latin1', 'cp1252', 'iso-8859-1']
+    
+    # Tentar diferentes encodings
+    for encoding in encodings:
+        try:
+            print(f"Tentando ler {arquivo_csv} com encoding {encoding}...")
+            df = pd.read_csv(arquivo_csv, encoding=encoding)
+            print(f"Leitura bem-sucedida com encoding {encoding}")
+            break
+        except UnicodeDecodeError:
+            print(f"Erro de decodificação com encoding {encoding}")
+            if encoding == encodings[-1]:
+                print(f"Todos os encodings falharam, não foi possível ler {arquivo_csv}")
+                return [], []
     
     # Extrair latência do rádio das linhas de log
     latencias_radio = []
@@ -39,7 +108,10 @@ def extrair_latencias_radio(arquivo_csv):
     else:
         # Formato antigo - extrair por regex
         for index, row in df.iterrows():
-            match = radio_regex.search(str(row['valor']) if 'valor' in df.columns else '')
+            valor = str(row['valor']) if 'valor' in df.columns else ''
+            
+            # Usar regex para capturar RadioLatency
+            match = radio_regex.search(valor)
             if match:
                 id_num, timestamp, radio_latency = match.groups()
                 radio_latency_val = int(radio_latency)
@@ -50,21 +122,56 @@ def extrair_latencias_radio(arquivo_csv):
                 
                 latencias_radio.append(radio_latency_val)
                 ids.append(int(id_num))
+            else:
+                # Se o padrão principal não foi encontrado, tentar uma regex mais genérica
+                generic_regex = re.compile(r'RadioLatency: (\d+) ms')
+                match = generic_regex.search(valor)
+                if match:
+                    radio_latency = match.group(1)
+                    radio_latency_val = int(radio_latency)
+                    
+                    if radio_latency_val > 4000000000:
+                        radio_latency_val = abs(radio_latency_val - (1 << 32))
+                    
+                    latencias_radio.append(radio_latency_val)
+                    ids.append(index)  # Usar o índice como ID já que não temos o ID real
     
     return ids, latencias_radio
 
 def extrair_latencias_mqtt(arquivo_csv):
+    """
+    Extrai apenas as latências do MQTT a partir do arquivo CSV.
+    IMPORTANTE: A função retorna uma lista vazia para latencias_radio,
+    pois todas as latências de rádio devem vir do arquivo dados_radio.csv.
+    """
     # Verificar se o arquivo existe
     if not os.path.exists(arquivo_csv):
         print(f"Arquivo {arquivo_csv} não encontrado")
         return [], [], []
-        
-    df = pd.read_csv(arquivo_csv)
     
-    # Extrair latências do MQTT
-    latencias_radio = []
+    # Lista de encodings para tentar
+    encodings = ['utf-8', 'latin1', 'cp1252', 'iso-8859-1']
+    
+    # Tentar diferentes encodings
+    for encoding in encodings:
+        try:
+            print(f"Tentando ler {arquivo_csv} com encoding {encoding}...")
+            df = pd.read_csv(arquivo_csv, encoding=encoding)
+            print(f"Leitura bem-sucedida com encoding {encoding}")
+            break
+        except UnicodeDecodeError:
+            print(f"Erro de decodificação com encoding {encoding}")
+            if encoding == encodings[-1]:
+                print(f"Todos os encodings falharam, não foi possível ler {arquivo_csv}")
+                return [], [], []
+    
+    # Extrair latências do MQTT apenas
     latencias_mqtt = []
     latencias_total = []
+    
+    # IMPORTANTE: Inicializamos com uma lista vazia, pois os dados de rádio
+    # devem vir SEMPRE do arquivo dados_radio.csv
+    latencias_radio = []
     
     # Verificar se o arquivo é no formato novo (dados_mqtt_dashboard.csv)
     if 'mqtt_latency' in df.columns and 'total_latency' in df.columns:
@@ -73,17 +180,6 @@ def extrair_latencias_mqtt(arquivo_csv):
         
         # Extrair timestamps do sistema
         timestamps_sistema = df['timestamp'].dropna().tolist()
-        
-        if 'radio_latency' in df.columns:
-            # Corrigir valores de latência do rádio (overflow do Arduino)
-            latencias_radio_raw = df['radio_latency'].dropna().astype(int).tolist()
-            for val in latencias_radio_raw:
-                if val > 4000000000:  # Valor próximo a 2^32 indica overflow
-                    # Corrigir o overflow
-                    corrigido = abs(val - (1 << 32))
-                    latencias_radio.append(corrigido)
-                else:
-                    latencias_radio.append(val)
         
         # Verificar coluna mqtt_latency para valores realistas
         if 'mqtt_latency' in df.columns:
@@ -161,11 +257,23 @@ def extrair_latencias_mqtt(arquivo_csv):
     return latencias_radio, latencias_mqtt, latencias_total
 
 def plotar_comparacao_latencias():
-    # Verificar se existe o arquivo de dados corrigidos
-    arquivo_radio = 'dados_radio_corrigido.csv' if os.path.exists('dados_radio_corrigido.csv') else 'dados_radio.csv'
+    # Usar sempre o arquivo dados_radio.csv para extrair as latências do rádio
+    arquivo_radio = 'dados_radio.csv'
     
-    # Carregar dados do rádio
+    # Tentar limpar o arquivo CSV caso haja problemas de encoding
+    limpar_arquivo_csv(arquivo_radio)
+      # Carregar dados do rádio
     try:
+        # Tentar ler o arquivo como texto primeiro para diagnosticar problemas
+        try:
+            with open(arquivo_radio, 'rb') as f:
+                # Ler os primeiros bytes para diagnóstico
+                conteudo = f.read(100)
+                print(f"Primeiros bytes do arquivo {arquivo_radio}: {conteudo}")
+        except Exception as e:
+            print(f"Erro ao tentar ler bytes do arquivo para diagnóstico: {e}")
+        
+        # Tentar extrair latências
         ids_radio, latencias_radio = extrair_latencias_radio(arquivo_radio)
         print(f"Dados de rádio (de {arquivo_radio}): {len(latencias_radio)} amostras")
         
@@ -181,21 +289,24 @@ def plotar_comparacao_latencias():
         
         # Se não temos valores válidos após filtragem, gerar alguns dados realistas
         if not latencias_radio_filtradas or all(l == 50 for l in latencias_radio_filtradas):
-            print("Gerando dados de rádio simulados para comparação...")
+            print("Gerando dados de rádio simulados para comparação (nenhum valor válido encontrado)...")
             # Gerar dados realistas para rádio (40-60ms é uma faixa típica)
             latencias_radio_filtradas = [np.random.randint(40, 60) for _ in range(50)]
         
         latencias_radio = latencias_radio_filtradas
         
     except Exception as e:
-        print(f"Erro ao carregar dados do rádio: {e}")
-        print("Gerando dados de rádio simulados...")
+        print(f"Erro ao carregar dados do rádio: {str(e)}")
+        print("Detalhes completos do erro:", repr(e))
+        print("Gerando dados de rádio simulados devido ao erro...")
         # Gerar dados realistas para rádio
-        latencias_radio = [np.random.randint(40, 60) for _ in range(50)]
-    
-    # Tentar carregar dados do MQTT do novo formato
+        latencias_radio = [np.random.randint(40, 60) for _ in range(50)]    # Tentar carregar dados do MQTT do novo formato
     try:
-        radio_latencias_mqtt, latencias_mqtt, latencias_total = extrair_latencias_mqtt('dados_mqtt_dashboard.csv')
+        # Limpar arquivo MQTT se necessário
+        limpar_arquivo_csv('dados_mqtt_dashboard.csv')
+        
+        # Carregamos dados MQTT do dashboard
+        _, latencias_mqtt, _ = extrair_latencias_mqtt('dados_mqtt_dashboard.csv')
         print(f"Dados de MQTT (novo formato): {len(latencias_mqtt)} amostras")
         
         # Verificar valores extremos de latências e corrigir
@@ -210,7 +321,7 @@ def plotar_comparacao_latencias():
         
         latencias_mqtt = latencias_mqtt_filtradas
         
-        # Recalcular latências totais para garantir consistência
+        # Recalcular latências totais usando sempre os dados de rádio do dados_radio.csv
         latencias_total = []
         for i in range(min(len(latencias_radio), len(latencias_mqtt))):
             latencias_total.append(latencias_radio[i] + latencias_mqtt[i])
@@ -218,10 +329,13 @@ def plotar_comparacao_latencias():
         print(f"Correção de valores extremos: {len(latencias_mqtt)} amostras após filtragem")
         
     except Exception as e:
-        print(f"Erro ao carregar dados do MQTT do novo formato: {e}")
-        # Tentar formato antigo
+        print(f"Erro ao carregar dados do MQTT do novo formato: {e}")        # Tentar formato antigo
         try:
-            radio_latencias_mqtt, latencias_mqtt, latencias_total = extrair_latencias_mqtt('dados_mqtt.csv')
+            # Limpar arquivo MQTT se necessário
+            limpar_arquivo_csv('dados_mqtt.csv')
+            
+            # Carrega apenas os dados de MQTT do formato antigo
+            _, latencias_mqtt, _ = extrair_latencias_mqtt('dados_mqtt.csv')
             print(f"Dados de MQTT (formato antigo): {len(latencias_mqtt)} amostras")
             
             # Verificar valores extremos das latências
@@ -236,7 +350,7 @@ def plotar_comparacao_latencias():
             
             latencias_mqtt = latencias_mqtt_filtradas
             
-            # Recalcular totais
+            # Recalcular totais usando sempre o dados_radio.csv para as latências do rádio
             latencias_total = []
             for i in range(min(len(latencias_radio), len(latencias_mqtt))):
                 latencias_total.append(latencias_radio[i] + latencias_mqtt[i])
