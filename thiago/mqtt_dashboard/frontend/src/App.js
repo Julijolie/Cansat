@@ -103,11 +103,17 @@ function App() {  const [connected, setConnected] = useState(false);  const [mes
       setMessageReceived(true);
       setTimeout(() => setMessageReceived(false), 1000);      // Process raw messages
       if (topic === `${TOPIC_BASE}/raw`) {
-        // Parse using regex to extract values - agora com suporte para "ovf" (overflow)
-        const dataRegex = /ID: (\d+) \| Temperatura: ([\d\.-]+) C \| Pressao: ([\d\.-]+) hPa \| Accel \[X,Y,Z\]: ([\d\.-]+), ([\d\.-]+), ([\d\.-]+) \| Gyro \[X,Y,Z\] \(°\/s\): ([\d\.-]+|ovf), ([\d\.-]+|ovf), ([\d\.-]+|ovf)/;
+        // Parse using regex to extract values, atualizando para corresponder ao formato real dos dados
+        const dataRegex = /ID: (\d+) \| Timestamp: (\d+) \| Intervalo: (\d+) ms \| RadioLatency: (\d+) ms \| Temperatura: ([\d\.-]+) C \| Pressao: ([\d\.-]+) hPa \| Accel \[X,Y,Z\]: ([\d\.-]+), ([\d\.-]+), ([\d\.-]+) \| Gyro \[X,Y,Z\] \(°\/s\): ([\d\.-]+|ovf), ([\d\.-]+|ovf), ([\d\.-]+|ovf)/;
         const match = value.match(dataRegex);
         
-        if (match) {          const [_, id, temp, press, accelX, accelY, accelZ, gyroX, gyroY, gyroZ] = match;
+        if (!match) {
+          console.warn("Não foi possível extrair dados do formato recebido:", value);
+        }
+          
+        if (match) {          
+          const [_, id, timestamp, intervalo, radioLatency, temp, press, accelX, accelY, accelZ, gyroX, gyroY, gyroZ] = match;
+          console.log("Dados extraídos com sucesso:", { id, timestamp, intervalo, radioLatency, temp, press, accelX, accelY, accelZ, gyroX, gyroY, gyroZ });
           
           // Função para converter valores para float, lidando com "ovf" (overflow)
           const parseValue = (val) => {
