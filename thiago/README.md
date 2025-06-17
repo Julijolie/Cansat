@@ -12,60 +12,68 @@ Este projeto permite medir e comparar a latência entre a transmissão de dados 
   - numpy
   - paho-mqtt
   - serial
+  - Para a interface web (opcional):
+    - Node.js e npm
+    - React
 
-## Workflow para Medição e Análise de Latência
+## Passo a Passo: Obtenção e Comparação de Dados
 
-### Passo 1: Upload dos Códigos nos Arduinos
+### 1. Preparação dos Arduinos
 
-1. Faça o upload do código `transmissor_com_latencia.ino` para o Arduino transmissor
-2. Faça o upload do código `receptor_com_latencia.ino` para o Arduino receptor
+1. **Upload do código no transmissor**: 
+   - Conecte o Arduino transmissor ao computador
+   - Abra o arquivo `transmissor/transmissor.ino` no Arduino IDE
+   - Selecione a placa e porta corretas no menu Ferramentas
+   - Clique em "Upload"
 
-Os códigos já estão modificados para incluir timestamp de envio e cálculo de latência.
+2. **Upload do código no receptor**:
+   - Conecte o Arduino receptor ao computador
+   - Abra o arquivo `receptor/receptor.ino` no Arduino IDE
+   - Selecione a placa e porta corretas no menu Ferramentas
+   - Clique em "Upload"
 
-### Passo 2: Coleta de Dados de Latência via Rádio
+### 2. Coleta Simultânea de Dados (Rádio e MQTT)
 
-1. Conecte o Arduino receptor ao computador via USB
-2. Execute o script `mqtt_sender.py` para capturar os dados do receptor:
+1. **Execute o script de coleta em um terminal**:
    ```
-   python mqtt_sender.py
+   # No Windows
+   coleta_dados.bat
+   
+   # No Linux/Mac
+   ./coleta_dados.sh
+   ```
+   
+   Este script automaticamente:
+   - Inicia o `mqtt_sender.py` para capturar dados do receptor via serial
+   - Inicia o `reading_mqtt_bridge_corrigido_new.py` para processar os dados via MQTT
+   - Os dados são salvos nos arquivos `dados_radio.csv` e `dados_mqtt_dashboard.csv`
+
+2. **Tempo de coleta**:
+   - Deixe o script executando por pelo menos 2 minutos para obter dados suficientes
+   - Pressione `CTRL+C` duas vezes para encerrar a coleta
+
+### 3. Processamento e Análise dos Dados
+
+1. **Execute o script de análise corrigida**:
+   ```
+   python compara_latencia_corrigido.py
    ```
    
    Este script:
-   - Lê os dados do monitor serial do Arduino receptor
-   - Salva os dados brutos no arquivo `dados_radio.csv`
-   - Publica os dados em tópicos MQTT
+   - Lê os dados coletados dos arquivos CSV
+   - Aplica correções para sincronização de relógios
+   - Gera gráficos comparando as latências de rádio vs. MQTT
+   - Salva os gráficos como `comparacao_latencias_real.png` e `comparacao_latencias_barras_real.png`
 
-3. Deixe o script executando por alguns minutos para coletar amostras suficientes (pelo menos 30 segundos)
-4. Pressione `CTRL+C` para encerrar a coleta
+2. **Verificação dos resultados**:
+   - Abra os arquivos PNG gerados para visualizar os gráficos
+   - Verifique as estatísticas exibidas no terminal (médias, medianas, etc.)
 
-### Passo 3: Coleta de Dados de Latência via MQTT
-
-1. Em uma nova janela do terminal, execute o script:
+3. **Análise detalhada** (opcional):
    ```
-   python mqtt_dashboard/backend/reading_mqtt_bridge.py
+   python validar_latencia.py
    ```
-   
-   Este script:
-   - Se conecta ao broker MQTT para receber os dados
-   - Calcula latências adicionais da transmissão MQTT
-   - Salva os dados em `dados_mqtt_dashboard.csv`
-
-2. Deixe o script executando por alguns minutos (mesmo tempo do passo anterior)
-3. Pressione `CTRL+C` para encerrar
-
-### Passo 4: Análise Básica de Latência
-
-Execute o script de comparação para visualizar os resultados:
-```
-python compara_latencia.py
-```
-
-Este script:
-- Lê os dados coletados dos arquivos CSV
-- Processa e limpa os dados, removendo valores inválidos
-- Gera gráficos comparando a latência do rádio vs. MQTT
-- Apresenta estatísticas como média, mediana e desvio padrão
-- Salva os gráficos como `comparacao_latencias.png` e `comparacao_latencias_barras.png`
+   Este script oferece análises adicionais e valida os cálculos de latência.
 
 ### Passo 5: Análises Adicionais (opcional)
 
@@ -87,40 +95,116 @@ Para análises mais detalhadas:
 
 Os resultados mostrarão três métricas principais:
 
-1. **Latência de Rádio**: Tempo entre o envio do dado pelo transmissor e sua recepção pelo receptor
-2. **Latência de MQTT**: Tempo adicional para o dado ser publicado e recebido via MQTT
+1. **Latência de Rádio**: Tempo entre o envio do dado pelo transmissor e sua recepção pelo receptor (tipicamente 5-50ms)
+2. **Latência de MQTT**: Tempo adicional para o dado ser publicado e recebido via MQTT (tipicamente 5-500ms, dependendo da rede)
 3. **Latência Total**: Soma das latências de rádio e MQTT
 
-Tipicamente, a latência do rádio está na faixa de 5-50ms, enquanto a latência MQTT pode variar de 5-100ms dependendo da conexão com o broker.
+### Fatores que Afetam a Latência
 
-## Solução de Problemas
+- **Rádio**:
+  - Distância entre transmissor e receptor
+  - Interferências ambientais/físicas
+  - Taxa de dados configurada no rádio (1Mbps vs 250Kbps)
+  - Tamanho do payload
 
-### Valores de Latência Muito Altos
+- **MQTT**:
+  - Qualidade da conexão com a internet
+  - Distância geográfica até o broker
+  - Carga no broker MQTT
+  - Configuração de QoS (0, 1 ou 2)
 
-Se os valores de latência parecerem irrealistas (por exemplo, milhões de milissegundos), o problema provavelmente está na medição de timestamp. Os scripts de análise tentam corrigir esses problemas automaticamente, mas você também pode:
+## Otimizações e Experimentos
 
-1. Verificar se há overflow no cálculo do Arduino (quando `currentTime - timestamp` resulta em valores negativos)
-2. Executar `analisa_timestamp_arduino.py` para diagnóstico detalhado
+Para otimizar a latência, você pode experimentar:
 
-### Erro de Acesso à Porta Serial
+1. **Otimizações de Rádio**:
+   - Reduzir o tamanho do payload
+   - Aumentar a potência de transmissão (RF24_PA_LOW/MEDIUM/HIGH)
+   - Alterar o canal RF para evitar interferências
+   - Ajustar os parâmetros de retry (radio.setRetries)
 
-Lembre-se que apenas um processo pode acessar a porta serial por vez. Certifique-se de encerrar o `mqtt_sender.py` antes de iniciar qualquer outro script que precise acessar a porta.
+2. **Otimizações de MQTT**:
+   - Usar um broker local para menor latência
+   - Ajustar o QoS (0 para menor latência, 1 ou 2 para maior confiabilidade)
+   - Reduzir o tamanho das mensagens MQTT
 
-### Inconsistência nos Dados
+3. **Experimentos Sugeridos**:
+   - Compare a latência com diferentes tamanhos de payload
+   - Teste diferentes brokers MQTT e compare os resultados
+   - Avalie o impacto da distância física entre os dispositivos
 
-Se a soma das latências individuais não corresponder à latência total, o script `compara_latencia.py` corrigirá isso automaticamente, garantindo que a latência total seja sempre a soma das latências de rádio e MQTT.
+## Arquivos do Projeto
 
-## Otimizações
+- **/transmissor**: Códigos para o Arduino transmissor
+- **/receptor**: Códigos para o Arduino receptor
+- **/mqtt_dashboard**:
+  - **/backend**: Scripts para processamento de dados MQTT
+  - **/frontend**: Interface web em React
 
-Com base nos resultados das análises, você pode:
+## Referências e Recursos
 
-1. Ajustar a taxa de dados do rádio (RF24_250KBPS vs RF24_1MBPS)
-2. Otimizar o tamanho do payload
-3. Experimentar diferentes brokers MQTT ou ajustar parâmetros de QoS
-4. Implementar compressão de dados para reduzir o tamanho das mensagens
+- [Documentação do nRF24L01+](https://nRF24.github.io/RF24)
+- [Protocolo MQTT](https://mqtt.org/)
+- [Medição de Latência em Sistemas Distribuídos](https://en.wikipedia.org/wiki/Network_delay)
 
-## Observações Importantes
+---
 
-- Os scripts executam filtragem para remover valores absurdos, mas é sempre bom analisar os dados brutos
-- A precisão das medições depende da sincronização de relógio entre os dispositivos
-- Em alguns casos, a latência do rádio pode parecer 0ms devido à limitação de resolução do `millis()` do Arduino
+Desenvolvido para projeto Cansat IBMEC Rio - 2025.1
+
+## GUIA RÁPIDO: EXECUTANDO A INTERFACE
+
+Siga este guia passo a passo para iniciar rapidamente a interface do dashboard:
+
+### Windows
+
+#### Iniciar o Backend (Terminal 1)
+```powershell
+# Navegue para a pasta do backend
+cd c:\Users\Arthur\Documents\ibmecRio\2025.1\Cansat\thiago\mqtt_dashboard\backend
+
+# Execute o script de processamento MQTT
+python reading_mqtt_bridge_corrigido_new.py
+```
+
+#### Iniciar o Frontend (Terminal 2)
+```powershell
+# Navegue para a pasta do frontend
+cd c:\Users\Arthur\Documents\ibmecRio\2025.1\Cansat\thiago\mqtt_dashboard\frontend
+
+# Instale as dependências (apenas na primeira vez)
+npm install
+
+# Inicie o servidor de desenvolvimento React
+npm start
+```
+
+### Linux/Mac
+
+#### Iniciar o Backend (Terminal 1)
+```bash
+# Navegue para a pasta do backend
+cd ~/ibmecRio/2025.1/Cansat/thiago/mqtt_dashboard/backend
+
+# Execute o script de processamento MQTT
+python reading_mqtt_bridge_corrigido_new.py
+```
+
+#### Iniciar o Frontend (Terminal 2)
+```bash
+# Navegue para a pasta do frontend
+cd ~/ibmecRio/2025.1/Cansat/thiago/mqtt_dashboard/frontend
+
+# Instale as dependências (apenas na primeira vez)
+npm install
+
+# Inicie o servidor de desenvolvimento React
+npm start
+```
+
+### O que esperar:
+1. O backend irá mostrar mensagens de conexão com o broker MQTT
+2. O frontend abrirá automaticamente em seu navegador padrão (ou acesse http://localhost:3000)
+3. Os dados aparecerão no dashboard assim que o backend começar a receber as mensagens MQTT
+
+### Para encerrar:
+- Pressione `CTRL+C` em ambos os terminais para encerrar os processos
