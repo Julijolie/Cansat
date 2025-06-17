@@ -13,9 +13,10 @@ unsigned long sentMessages = 0;
 Adafruit_BMP085 bmp;
 MPU6050 mpu;
 
-// Nova struct para payload com dados dos sensores
+// Nova struct para payload com dados dos sensores e timestamp
 struct Payload {
   uint32_t id;
+  unsigned long timestamp; // Timestamp de envio para medir latência
   float temperature;
   float pressure;
   float accelX, accelY, accelZ;
@@ -52,6 +53,7 @@ void setup() {
 void loop() {
   Payload data;
   data.id = sentMessages;
+  data.timestamp = millis(); // Adiciona o timestamp atual no momento do envio
   // Leitura BMP180
   data.temperature = bmp.readTemperature();
   data.pressure = bmp.readPressure() / 100.0; // hPa
@@ -67,6 +69,7 @@ void loop() {
   if (success) {
     sentMessages++;
     Serial.print("ID: "); Serial.print(data.id);
+    Serial.print(" | Timestamp: "); Serial.print(data.timestamp);
     Serial.print(" | Temperatura: "); Serial.print(data.temperature, 2); Serial.print(" C");
     Serial.print(" | Pressao: "); Serial.print(data.pressure, 2); Serial.print(" hPa");
     Serial.print(" | Accel [X,Y,Z]: "); Serial.print(data.accelX, 3); Serial.print(", "); Serial.print(data.accelY, 3); Serial.print(", "); Serial.print(data.accelZ, 3);

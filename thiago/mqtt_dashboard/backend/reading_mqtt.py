@@ -7,13 +7,17 @@ import re
 
 
 # Regex para extrair os dados do print do receptor
-DATA_REGEX = re.compile(r'ID: (\d+) \| Temperatura: ([\d\.-]+) C \| Pressao: ([\d\.-]+) hPa \| Accel \[X,Y,Z\]: ([\d\.-]+), ([\d\.-]+), ([\d\.-]+) \| Gyro \[X,Y,Z\] \(°/s\): ([\d\.-]+), ([\d\.-]+), ([\d\.-]+)')
+DATA_REGEX = re.compile(r'ID: (\d+) \| Timestamp: (\d+) \| RadioLatency: (\d+) ms \| Temperatura: ([\d\.-]+) C \| Pressao: ([\d\.-]+) hPa \| Accel \[X,Y,Z\]: ([\d\.-]+), ([\d\.-]+), ([\d\.-]+) \| Gyro \[X,Y,Z\] \(°/s\): ([\d\.-]+), ([\d\.-]+), ([\d\.-]+)')
 
 # Configuração MQTT
 MQTT_BROKER = "broker.hivemq.com"  # Broker público acessível de qualquer lugar
 MQTT_PORT = 1883
 MQTT_TOPIC_BASE = "cansat/estacao/teste1"  # Tópico base para os dados do CanSat
 MQTT_TOPIC_RAW = f"{MQTT_TOPIC_BASE}/raw"  # Dados brutos
+MQTT_TOPIC_TIMESTAMP = f"{MQTT_TOPIC_BASE}/timestamp"  # Timestamp original de envio
+MQTT_TOPIC_RADIO_LATENCY = f"{MQTT_TOPIC_BASE}/radioLatency"  # Latência do rádio
+MQTT_TOPIC_MQTT_LATENCY = f"{MQTT_TOPIC_BASE}/mqttLatency"  # Latência do MQTT
+MQTT_TOPIC_TOTAL_LATENCY = f"{MQTT_TOPIC_BASE}/totalLatency"  # Latência total
 MQTT_TOPIC_TEMP = f"{MQTT_TOPIC_BASE}/temperatura"  # Temperatura
 MQTT_TOPIC_PRESS = f"{MQTT_TOPIC_BASE}/pressao"  # Pressão
 MQTT_TOPIC_ACCEL_X = f"{MQTT_TOPIC_BASE}/accelX"  # Aceleração X
@@ -73,9 +77,21 @@ def main():
                     # Tentar extrair os dados individuais com regex
                     match = DATA_REGEX.search(linha)
                     if match:
-                        id_num, temp, press, accel_x, accel_y, accel_z, gyro_x, gyro_y, gyro_z = match.groups()
+                        id_num, timestamp, radio_latency, temp, press, accel_x, accel_y, accel_z, gyro_x, gyro_y, gyro_z = match.groups()
+                        
+                        # Registrar o timestamp de recepção no backend
+                        backend_receive_time = time.time() * 1000  # Para compatibilidade com milissegundos
+                        
+                        # Calcular latências
+                        radio_latency_ms = int(radio_latency)
+                        mqtt_latency_ms = int(backend_receive_time) - int(timestamp)
+                        total_latency_ms = radio_latency_ms + mqtt_latency_ms
                         
                         # Publicar dados em tópicos separados
+                        client.publish(MQTT_TOPIC_TIMESTAMP, timestamp)
+                        client.publish(MQTT_TOPIC_RADIO_LATENCY, str(radio_latency_ms))
+                        client.publish(MQTT_TOPIC_MQTT_LATENCY, str(mqtt_latency_ms))
+                        client.publish(MQTT_TOPIC_TOTAL_LATENCY, str(total_latency_ms))
                         client.publish(MQTT_TOPIC_TEMP, temp)
                         client.publish(MQTT_TOPIC_PRESS, press)
                         client.publish(MQTT_TOPIC_ACCEL_X, accel_x)
@@ -88,7 +104,11 @@ def main():
                         # Também publicar como JSON para consumo mais fácil
                         json_data = {
                             "id": int(id_num),
-                            "timestamp": time.time(),
+                            "timestamp": int(timestamp),
+                            "systemTime": time.time(),
+                            "radioLatency": radio_latency_ms,
+                            "mqttLatency": mqtt_latency_ms,
+                            "totalLatency": total_latency_ms,
                             "temperatura": float(temp),
                             "pressao": float(press),
                             "aceleracao": {

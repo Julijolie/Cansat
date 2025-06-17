@@ -13,7 +13,7 @@ SERIAL_PORT = 'COM8'  # Altere para a porta correta do seu receptor
 BAUDRATE = 9600
 
 # Regex para extrair os dados do print do receptor
-regex = re.compile(r'ID: (\d+) \| Temperatura: ([\d\.-]+) C \| Pressao: ([\d\.-]+) hPa \| Accel \[X,Y,Z\]: ([\d\.-]+), ([\d\.-]+), ([\d\.-]+) \| Gyro \[X,Y,Z\] \(°/s\): ([\d\.-]+), ([\d\.-]+), ([\d\.-]+)')
+regex = re.compile(r'ID: (\d+) \| Timestamp: (\d+) \| RadioLatency: (\d+) ms \| Temperatura: ([\d\.-]+) C \| Pressao: ([\d\.-]+) hPa \| Accel \[X,Y,Z\]: ([\d\.-]+), ([\d\.-]+), ([\d\.-]+) \| Gyro \[X,Y,Z\] \(°/s\): ([\d\.-]+), ([\d\.-]+), ([\d\.-]+)')
 
 def envia_mqtt(dado, client):
     for chave, valor in dado.items():
@@ -31,6 +31,9 @@ def envia_mqtt_string(linha, client):
     time.sleep(0.05)
 
 def envia_mqtt_string_multibroker(linha, clients):
+    # Registrar o timestamp de recepção no MQTT
+    mqtt_receive_time = time.time() * 1000  # Timestamp em milissegundos
+    
     for client, broker_name in clients:
         topico = TOPIC_BASE + '/raw'
         result = client.publish(topico, linha, qos=1)
@@ -44,9 +47,17 @@ def envia_mqtt_string_multibroker(linha, clients):
         match = regex.search(linha)
         if match:
             # Se conseguiu extrair todos os dados
-            id_num, temp, press, accel_x, accel_y, accel_z, gyro_x, gyro_y, gyro_z = match.groups()
+            id_num, timestamp, radio_latency, temp, press, accel_x, accel_y, accel_z, gyro_x, gyro_y, gyro_z = match.groups()
+            
+            # Calcular a latência MQTT (tempo atual - timestamp de envio original)
+            mqtt_latency = mqtt_receive_time - int(timestamp)
+            total_latency = mqtt_latency  # Latência total = latência do rádio + latência do MQTT
             
             # Publicar em tópicos individuais
+            client.publish(f"{TOPIC_BASE}/timestamp", timestamp)
+            client.publish(f"{TOPIC_BASE}/radioLatency", radio_latency)
+            client.publish(f"{TOPIC_BASE}/mqttLatency", str(int(mqtt_latency)))
+            client.publish(f"{TOPIC_BASE}/totalLatency", str(int(total_latency)))
             client.publish(f"{TOPIC_BASE}/temperatura", temp)
             client.publish(f"{TOPIC_BASE}/pressao", press)
             client.publish(f"{TOPIC_BASE}/accelX", accel_x)
@@ -57,6 +68,7 @@ def envia_mqtt_string_multibroker(linha, clients):
             client.publish(f"{TOPIC_BASE}/gyroZ", gyro_z)
             
             print(f'Enviados dados separados para {broker_name}')
+            print(f'Radio Latency: {radio_latency}ms, MQTT Latency: {int(mqtt_latency)}ms, Total: {int(total_latency)}ms')
         
         time.sleep(0.01)
 

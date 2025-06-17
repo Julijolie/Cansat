@@ -10,6 +10,7 @@ unsigned long receivedMessages = 0;
 // Struct igual à do transmissor
 struct Payload {
   uint32_t id;
+  unsigned long timestamp; // Timestamp de envio para medir latência
   float temperature;
   float pressure;
   float accelX, accelY, accelZ;
@@ -34,7 +35,13 @@ void loop() {
     radio.read(&data, sizeof(data));
     receivedMessages++;
 
+    // Calcular latência (tempo atual - timestamp de envio)
+    unsigned long currentTime = millis();
+    unsigned long radioLatency = currentTime - data.timestamp;
+
     Serial.print("ID: "); Serial.print(data.id);
+    Serial.print(" | Timestamp: "); Serial.print(data.timestamp);
+    Serial.print(" | RadioLatency: "); Serial.print(radioLatency); Serial.print(" ms");
     Serial.print(" | Temperatura: "); Serial.print(data.temperature, 2); Serial.print(" C");
     Serial.print(" | Pressao: "); Serial.print(data.pressure, 2); Serial.print(" hPa");
     Serial.print(" | Accel [X,Y,Z]: "); Serial.print(data.accelX, 3); Serial.print(", "); Serial.print(data.accelY, 3); Serial.print(", "); Serial.print(data.accelZ, 3);
